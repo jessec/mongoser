@@ -39,12 +39,13 @@ public class MyExceptionServlet extends HttpServlet {
   }
 
   // ------------------------------------
-  @SuppressWarnings( "unchecked" )
-  @Override
+
+  @SuppressWarnings("unused")
+@Override
   protected void service(HttpServletRequest req, HttpServletResponse res)
     throws ServletException, IOException {
 
-    Class exception_type = (Class)req.getAttribute( "javax.servlet.error.exception_type" );
+    Class<?> exception_type = (Class<?>)req.getAttribute( "javax.servlet.error.exception_type" );
     if( exception_type==null ){
       res.setStatus( SC_NOT_FOUND );
       return;

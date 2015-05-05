@@ -55,7 +55,8 @@ public class Search {
   private static Search mysearch;
   //private TopScoreDocCollector collector;
   private StandardAnalyzer analyzer;
-  private String index_path;
+  @SuppressWarnings("unused")
+private String index_path;
   private Directory index;
   private boolean commited = false;
   private SearcherManager sm;

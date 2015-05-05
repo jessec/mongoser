@@ -55,7 +55,8 @@ public class GridfsServlet extends SkeletonMongodbServlet {
   @Override
   public void init() throws ServletException{
 
-    ServletConfig config = getServletConfig();
+    @SuppressWarnings("unused")
+	ServletConfig config = getServletConfig();
     String name = getServletName();
     log.fine( "init() "+name );
 
@@ -65,7 +66,8 @@ public class GridfsServlet extends SkeletonMongodbServlet {
   @Override
   public void destroy(){
 
-    ServletConfig config = getServletConfig();
+    @SuppressWarnings("unused")
+	ServletConfig config = getServletConfig();
     String name = getServletName();
     log.fine( "destroy() "+name );
     if( fs_cache!=null )
@@ -75,7 +77,8 @@ public class GridfsServlet extends SkeletonMongodbServlet {
 
   // POST
   // ------------------------------------
-  @Override
+  @SuppressWarnings("unused")
+@Override
   protected void doPost(HttpServletRequest req, HttpServletResponse res)
     throws ServletException, IOException {
 
@@ -210,7 +213,8 @@ public class GridfsServlet extends SkeletonMongodbServlet {
 
     final int len = 4096;
     byte data[] = new byte[len];
-    int n = 0, bytesno = 0;
+    @SuppressWarnings("unused")
+	int n = 0, bytesno = 0;
     while( (n=is.read(data, 0, len))>0 ){
       os.write( data, 0, n );
       bytesno += n;
@@ -366,7 +370,8 @@ public class GridfsServlet extends SkeletonMongodbServlet {
       if( ct!=null )
 	res.setContentType( ct );
       OutputStream os = res.getOutputStream();
-      long l;
+      @SuppressWarnings("unused")
+	long l;
       while( (l=db_file.writeTo( os ))>0 );
       os.flush();
       os.close();

@@ -158,7 +158,8 @@ public class SkeletonMongodbServlet extends HttpServlet {
   @Override
   public void init() throws ServletException{
 
-    ServletConfig config = getServletConfig();
+    @SuppressWarnings("unused")
+	ServletConfig config = getServletConfig();
     String name = getServletName();
     log.fine( "default init() "+name );
 
@@ -175,7 +176,8 @@ public class SkeletonMongodbServlet extends HttpServlet {
   @Override
   public void destroy(){
 
-    ServletConfig config = getServletConfig();
+    @SuppressWarnings("unused")
+	ServletConfig config = getServletConfig();
     String name = getServletName();
     log.fine( "destroy() "+name );
 

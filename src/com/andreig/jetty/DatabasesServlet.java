@@ -36,7 +36,8 @@ public class DatabasesServlet extends SkeletonMongodbServlet {
   @Override
   public void init() throws ServletException{
 
-    ServletConfig config = getServletConfig();
+    @SuppressWarnings("unused")
+	ServletConfig config = getServletConfig();
     String name = getServletName();
     log.fine( "init() "+name );
 
@@ -46,7 +47,8 @@ public class DatabasesServlet extends SkeletonMongodbServlet {
   @Override
   public void destroy(){
 
-    ServletConfig config = getServletConfig();
+    @SuppressWarnings("unused")
+	ServletConfig config = getServletConfig();
     String name = getServletName();
     log.fine( "destroy() "+name );
 

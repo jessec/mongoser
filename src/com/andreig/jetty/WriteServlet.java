@@ -55,7 +55,8 @@ public class WriteServlet extends SkeletonMongodbServlet {
   public void init() throws ServletException{
 
     super.init();
-    ServletConfig config = getServletConfig();
+    @SuppressWarnings("unused")
+	ServletConfig config = getServletConfig();
     String name = getServletName();
     log.fine( "init() "+name );
 
@@ -65,7 +66,8 @@ public class WriteServlet extends SkeletonMongodbServlet {
   @Override
   public void destroy(){
 
-    ServletConfig config = getServletConfig();
+    @SuppressWarnings("unused")
+	ServletConfig config = getServletConfig();
     String name = getServletName();
     log.fine( "destroy() "+name );
 
@@ -286,7 +288,7 @@ public class WriteServlet extends SkeletonMongodbServlet {
 	    String val = (String)o.get( fld );
 	    if( val==null )
 	      continue;
-	    _writer.add_searchable_s( doc, fld, val );
+	    Search.add_searchable_s( doc, fld, val );
 	    commit = true;
 	  }
 	  if( commit )
@@ -412,14 +414,14 @@ public class WriteServlet extends SkeletonMongodbServlet {
 	      String val = (String)o.get( fld );
 	      if( val==null )
 		continue;
-	      _writer.add_searchable_s( doc, fld, val );
+	      Search.add_searchable_s( doc, fld, val );
 	      commit = true;
 	    }
 	    if( commit ){
 	      ObjectId id = (ObjectId)o.get("_id");
 	      String sid = id.toStringMongod();
-	      _writer.add_storable( doc, "_id", sid );
-	      _writer.add_searchable_s( doc, "_dbid_", fn );
+	      Search.add_storable( doc, "_id", sid );
+	      Search.add_searchable_s( doc, "_dbid_", fn );
 	      _writer.commit( doc );
 	    }
 	  }

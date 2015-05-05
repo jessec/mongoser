@@ -36,7 +36,8 @@ import com.mongodb.util.JSONParseException;
 @WebServlet(name="QueryServlet")
 public class DistinctServlet extends SkeletonMongodbServlet {
 
-  private final static int MAX_FIELDS_TO_RETURN = 1000;
+  @SuppressWarnings("unused")
+private final static int MAX_FIELDS_TO_RETURN = 1000;
   private static final Logger log = Logger.getLogger( DistinctServlet.class.getName() );
   private ThreadLocal<StringBuilder> tl = new ThreadLocal<StringBuilder>(){
     @Override
@@ -46,7 +47,8 @@ public class DistinctServlet extends SkeletonMongodbServlet {
   };
 
   // --------------------------------
-  @Override
+  @SuppressWarnings("unused")
+@Override
   public void init() throws ServletException{
 
     ServletConfig config = getServletConfig();
@@ -56,7 +58,8 @@ public class DistinctServlet extends SkeletonMongodbServlet {
   }
 
   // --------------------------------
-  @Override
+  @SuppressWarnings("unused")
+@Override
   public void destroy(){
 
     ServletConfig config = getServletConfig();
@@ -125,7 +128,7 @@ public class DistinctServlet extends SkeletonMongodbServlet {
 	r.close();
     }
 
-    List l = col.distinct( key, q );
+    List<?> l = col.distinct( key, q );
     if( l==null || l.size()==0 ){
       error( res, SC_NOT_FOUND, Status.get("no documents found") );
       return;
@@ -177,7 +180,7 @@ public class DistinctServlet extends SkeletonMongodbServlet {
     DB db = mongo.getDB( db_name );
     DBCollection col = db.getCollection( col_name );
 
-    List l = col.distinct( key );
+    List<?> l = col.distinct( key );
     if( l==null || l.size()==0 ){
       error( res, SC_NOT_FOUND, Status.get("no documents found") );
       return;
