@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -25,88 +25,85 @@ import com.mongodb.DB;
 import com.mongodb.WriteResult;
 
 @SuppressWarnings("serial")
-@WebServlet(name="AdminServlet")
+@WebServlet(name = "AdminServlet")
 public class AdminServlet extends SkeletonMongodbServlet {
 
-  private static final Logger log = Logger.getLogger( AdminServlet.class.getName() );
+	private static final Logger log = Logger.getLogger(AdminServlet.class.getName());
 
-  // --------------------------------
-  @Override
-  public void init() throws ServletException{
+	// --------------------------------
+	@Override
+	public void init() throws ServletException {
 
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "init() "+name );
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("init() " + name);
 
-  }
+	}
 
-  // --------------------------------
-  @Override
-  public void destroy(){
+	// --------------------------------
+	@Override
+	public void destroy() {
 
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "destroy() "+name );
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("destroy() " + name);
 
-  }
+	}
 
-  // DELETE
-  // ------------------------------------
-  @Override
-  protected void doDelete(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	// DELETE
+	// ------------------------------------
+	@Override
+	protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    log.fine( "doDelete()" );
+		log.fine("doDelete()");
 
-    if( !can_admin(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		if (!can_admin(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    String db_name = req.getParameter( "dbname" );
-    String user = req.getParameter( "user" );
-    if( db_name==null || user==null ){
-      error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-      return;
-    }
+		String db_name = req.getParameter("dbname");
+		String user = req.getParameter("user");
+		if (db_name == null || user == null) {
+			error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+			return;
+		}
 
-    DB db = mongo.getDB( db_name );
-    WriteResult o = db.removeUser( user );
+		DB db = mongo.getDB(db_name);
+		WriteResult o = db.removeUser(user);
 
-    out_str( req, o.toString(), "application/json" );
+		out_str(req, o.toString(), "application/json");
 
-  }
+	}
 
-  // PUT
-  // ------------------------------------
-  @Override
-  protected void doPut(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	// PUT
+	// ------------------------------------
+	@Override
+	protected void doPut(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    log.fine( "doPut()" );
+		log.fine("doPut()");
 
-    if( !can_admin(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		if (!can_admin(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    String db_name = req.getParameter( "dbname" );
-    String user = req.getParameter( "user" );
-    String passwd = req.getParameter( "passwd" );
-    if( db_name==null || user==null || passwd==null ){
-      error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-      return;
-    }
-    boolean read_only = Boolean.parseBoolean( req.getParameter("readonly") );
+		String db_name = req.getParameter("dbname");
+		String user = req.getParameter("user");
+		String passwd = req.getParameter("passwd");
+		if (db_name == null || user == null || passwd == null) {
+			error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+			return;
+		}
+		boolean read_only = Boolean.parseBoolean(req.getParameter("readonly"));
 
-    DB db = mongo.getDB( db_name );
-    WriteResult o = db.addUser( user, passwd.toCharArray(), read_only );
+		DB db = mongo.getDB(db_name);
+		WriteResult o = db.addUser(user, passwd.toCharArray(), read_only);
 
-    out_str( req, o.toString(), "application/json" );
+		out_str(req, o.toString(), "application/json");
 
-  }
-
+	}
 
 }

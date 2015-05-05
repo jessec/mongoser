@@ -5,23 +5,23 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
 @SuppressWarnings("serial")
 public class MyException extends RuntimeException {
 
-  public  int code;
-  public  Status status;
+	public int code;
+	public Status status;
 
-  public MyException( int code, Status status ){
-    this( code );
-    this.status = status;
-  }
+	public MyException(int code, Status status) {
+		this(code);
+		this.status = status;
+	}
 
-  public MyException( int code ){
-    this.code = code;
-  }
+	public MyException(int code) {
+		this.code = code;
+	}
 
 }

@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -33,238 +33,231 @@ import com.mongodb.util.JSON;
 import com.mongodb.util.JSONParseException;
 
 @SuppressWarnings("serial")
-@WebServlet(name="QueryServlet")
+@WebServlet(name = "QueryServlet")
 public class AggregateServlet extends SkeletonMongodbServlet {
 
-  private final static int MAX_FIELDS_TO_RETURN = 1000;
-  private static final Logger log = Logger.getLogger( AggregateServlet.class.getName() );
-  private ThreadLocal<StringBuilder> tl = new ThreadLocal<StringBuilder>(){
-    @Override
-    protected synchronized StringBuilder initialValue(){
-      return new StringBuilder( 1024*4 );
-    }
-  };
+	private final static int MAX_FIELDS_TO_RETURN = 1000;
+	private static final Logger log = Logger.getLogger(AggregateServlet.class.getName());
+	private ThreadLocal<StringBuilder> tl = new ThreadLocal<StringBuilder>() {
+		@Override
+		protected synchronized StringBuilder initialValue() {
+			return new StringBuilder(1024 * 4);
+		}
+	};
 
-  // --------------------------------
-  @Override
-  public void init() throws ServletException{
+	// --------------------------------
+	@Override
+	public void init() throws ServletException {
 
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "init() "+name );
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("init() " + name);
 
-  }
-
-  // --------------------------------
-  @Override
-  public void destroy(){
-
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "destroy() "+name );
-
-  }
-
-  // POST
-  // ------------------------------------
-  @Override
-  protected void doPost(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
-
-    log.fine( "doPost()" );
-
-    if( !can_read(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
-
-    InputStream is = req.getInputStream();
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-      return;
-    }
-    String skip = req.getParameter( "skip" );
-    String limit = req.getParameter( "limit" );
-
-    DB db = mongo.getDB( db_name );
-    DBCollection col = db.getCollection( col_name );
-
-    BufferedReader r = null;
-    DBObject q=null, sort=null;
-    try{
-
-      r = new BufferedReader( new InputStreamReader(is) );
-      String data = r.readLine();
-      if( data==null ){
-	error( res, SC_BAD_REQUEST, Status.get("no data") );
-	return;
-      }
-      try{
-	q = (DBObject)JSON.parse( data );
-      }
-      catch( JSONParseException e ){
-	error( res, SC_BAD_REQUEST, Status.get("can not parse data") );
-	return;
-      }
-      // sort param
-      data = r.readLine();
-      if( data!=null ){
-	try{
-	  sort = (DBObject)JSON.parse( data );
 	}
-	catch( JSONParseException e ){
-	  error( res, SC_BAD_REQUEST, Status.get("can not parse sort arg") );
-	  return;
+
+	// --------------------------------
+	@Override
+	public void destroy() {
+
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("destroy() " + name);
+
 	}
-      }
 
-    }
-    finally{
-      if( r!=null )
-	r.close();
-    }
+	// POST
+	// ------------------------------------
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    DBCursor c;
-    if( sort==null )
-      c = col.find( q );
-    else
-      c = col.find( q ).sort( sort );
-    if( c==null ){
-      error( res, SC_NOT_FOUND, Status.get("no documents found") );
-      return;
-    }
+		log.fine("doPost()");
 
-    res.setIntHeader( "X-Documents-Count", c.count() );
+		if (!can_read(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    if( limit!=null ){
-      try{
-	c.limit( Math.min(Integer.parseInt(limit), MAX_FIELDS_TO_RETURN) );
-      }catch( NumberFormatException e ){
-	error( res, SC_BAD_REQUEST, Status.get("can not parse limit") );
-	c.close();
-	return;
-      }
-    }
-    else
-      c.limit( MAX_FIELDS_TO_RETURN );
+		InputStream is = req.getInputStream();
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+			return;
+		}
+		String skip = req.getParameter("skip");
+		String limit = req.getParameter("limit");
 
-    if( skip!=null ){
-      try{
-	c.skip( Integer.parseInt(skip) );
-      }catch( NumberFormatException e ){
-	error( res, SC_BAD_REQUEST, Status.get("can not parse skip") );
-	c.close();
-	return;
-      }
-    }
+		DB db = mongo.getDB(db_name);
+		DBCollection col = db.getCollection(col_name);
 
-    StringBuilder buf = tl.get();
-    // reset buf
-    buf.setLength( 0 );
+		BufferedReader r = null;
+		DBObject q = null, sort = null;
+		try {
 
-    int no = 0;
-    buf.append( "[" );
-    while( c.hasNext() ){
+			r = new BufferedReader(new InputStreamReader(is));
+			String data = r.readLine();
+			if (data == null) {
+				error(res, SC_BAD_REQUEST, Status.get("no data"));
+				return;
+			}
+			try {
+				q = (DBObject) JSON.parse(data);
+			} catch (JSONParseException e) {
+				error(res, SC_BAD_REQUEST, Status.get("can not parse data"));
+				return;
+			}
+			// sort param
+			data = r.readLine();
+			if (data != null) {
+				try {
+					sort = (DBObject) JSON.parse(data);
+				} catch (JSONParseException e) {
+					error(res, SC_BAD_REQUEST, Status.get("can not parse sort arg"));
+					return;
+				}
+			}
 
-      DBObject o = c.next();
-      JSON.serialize( o, buf );
-      buf.append( "," );
-      no++;
+		} finally {
+			if (r != null)
+				r.close();
+		}
 
-    }
+		DBCursor c;
+		if (sort == null)
+			c = col.find(q);
+		else
+			c = col.find(q).sort(sort);
+		if (c == null) {
+			error(res, SC_NOT_FOUND, Status.get("no documents found"));
+			return;
+		}
 
-    if( no>0 )
-      buf.setCharAt( buf.length()-1, ']' );
-    else
-      buf.append( ']' );
+		res.setIntHeader("X-Documents-Count", c.count());
 
-    res.setIntHeader( "X-Documents-Returned", no );
+		if (limit != null) {
+			try {
+				c.limit(Math.min(Integer.parseInt(limit), MAX_FIELDS_TO_RETURN));
+			} catch (NumberFormatException e) {
+				error(res, SC_BAD_REQUEST, Status.get("can not parse limit"));
+				c.close();
+				return;
+			}
+		} else
+			c.limit(MAX_FIELDS_TO_RETURN);
 
-    out_str( req, buf.toString(), "application/json" );
+		if (skip != null) {
+			try {
+				c.skip(Integer.parseInt(skip));
+			} catch (NumberFormatException e) {
+				error(res, SC_BAD_REQUEST, Status.get("can not parse skip"));
+				c.close();
+				return;
+			}
+		}
 
-  }
+		StringBuilder buf = tl.get();
+		// reset buf
+		buf.setLength(0);
 
-  // GET
-  // ------------------------------------
-  @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+		int no = 0;
+		buf.append("[");
+		while (c.hasNext()) {
 
-    log.fine( "doGet()" );
+			DBObject o = c.next();
+			JSON.serialize(o, buf);
+			buf.append(",");
+			no++;
 
-    if( !can_read(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		}
 
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-      return;
-    }
-    String skip = req.getParameter( "skip" );
-    String limit = req.getParameter( "limit" );
+		if (no > 0)
+			buf.setCharAt(buf.length() - 1, ']');
+		else
+			buf.append(']');
 
-    DB db = mongo.getDB( db_name );
-    DBCollection col = db.getCollection( col_name );
+		res.setIntHeader("X-Documents-Returned", no);
 
-    DBCursor c = col.find();
-    if( c==null ){
-      error( res, SC_NOT_FOUND, Status.get("no documents found") );
-      return;
-    }
+		out_str(req, buf.toString(), "application/json");
 
-    res.setIntHeader( "X-Documents-Count", c.count() );
+	}
 
-    if( limit!=null ){
-      try{
-	c.limit( Math.min(Integer.parseInt(limit), MAX_FIELDS_TO_RETURN) );
-      }catch( NumberFormatException e ){
-	error( res, SC_BAD_REQUEST, Status.get("can not parse limit") );
-	c.close();
-	return;
-      }
-    }
-    else
-      c.limit( MAX_FIELDS_TO_RETURN );
+	// GET
+	// ------------------------------------
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    if( skip!=null ){
-      try{
-	c.skip( Integer.parseInt(skip) );
-      }catch( NumberFormatException e ){
-	error( res, SC_BAD_REQUEST, Status.get("can not parse skip") );
-	c.close();
-	return;
-      }
-    }
+		log.fine("doGet()");
 
-    StringBuilder buf = tl.get();
-    buf.setLength( 0 );
+		if (!can_read(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    int no = 0;
-    buf.append( "[" );
-    while( c.hasNext() ){
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+			return;
+		}
+		String skip = req.getParameter("skip");
+		String limit = req.getParameter("limit");
 
-      DBObject o = c.next();
-      JSON.serialize( o, buf );
-      buf.append( "," );
-      no++;
+		DB db = mongo.getDB(db_name);
+		DBCollection col = db.getCollection(col_name);
 
-    }
+		DBCursor c = col.find();
+		if (c == null) {
+			error(res, SC_NOT_FOUND, Status.get("no documents found"));
+			return;
+		}
 
-    if( no>0 )
-      buf.setCharAt( buf.length()-1, ']' );
-    else
-      buf.append( ']' );
+		res.setIntHeader("X-Documents-Count", c.count());
 
-    res.setIntHeader( "X-Documents-Returned", no );
+		if (limit != null) {
+			try {
+				c.limit(Math.min(Integer.parseInt(limit), MAX_FIELDS_TO_RETURN));
+			} catch (NumberFormatException e) {
+				error(res, SC_BAD_REQUEST, Status.get("can not parse limit"));
+				c.close();
+				return;
+			}
+		} else
+			c.limit(MAX_FIELDS_TO_RETURN);
 
-    out_str( req, buf.toString(), "application/json" );
+		if (skip != null) {
+			try {
+				c.skip(Integer.parseInt(skip));
+			} catch (NumberFormatException e) {
+				error(res, SC_BAD_REQUEST, Status.get("can not parse skip"));
+				c.close();
+				return;
+			}
+		}
 
-  }
+		StringBuilder buf = tl.get();
+		buf.setLength(0);
+
+		int no = 0;
+		buf.append("[");
+		while (c.hasNext()) {
+
+			DBObject o = c.next();
+			JSON.serialize(o, buf);
+			buf.append(",");
+			no++;
+
+		}
+
+		if (no > 0)
+			buf.setCharAt(buf.length() - 1, ']');
+		else
+			buf.append(']');
+
+		res.setIntHeader("X-Documents-Returned", no);
+
+		out_str(req, buf.toString(), "application/json");
+
+	}
 }

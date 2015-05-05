@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -23,57 +23,54 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.gson.Gson;
 
-
 @SuppressWarnings("serial")
-@WebServlet(name="MyExceptionServlet")
+@WebServlet(name = "MyExceptionServlet")
 public class MyExceptionServlet extends HttpServlet {
 
-  private static final Logger log = Logger.getLogger( MyExceptionServlet.class.getName() );
-  private Gson gson = new Gson();
+	private static final Logger log = Logger.getLogger(MyExceptionServlet.class.getName());
+	private Gson gson = new Gson();
 
-  // --------------------------------
-  @Override
-  public void init() throws ServletException{
-    log.fine( "inited" );
-    super.init();
-  }
+	// --------------------------------
+	@Override
+	public void init() throws ServletException {
+		log.fine("inited");
+		super.init();
+	}
 
-  // ------------------------------------
+	// ------------------------------------
 
-  @SuppressWarnings("unused")
-@Override
-  protected void service(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	@SuppressWarnings("unused")
+	@Override
+	protected void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    Class<?> exception_type = (Class<?>)req.getAttribute( "javax.servlet.error.exception_type" );
-    if( exception_type==null ){
-      res.setStatus( SC_NOT_FOUND );
-      return;
-    }
+		Class<?> exception_type = (Class<?>) req.getAttribute("javax.servlet.error.exception_type");
+		if (exception_type == null) {
+			res.setStatus(SC_NOT_FOUND);
+			return;
+		}
 
-    Integer status_code = (Integer)req.getAttribute( "javax.servlet.error.status_code" );
-    String error_message = (String)req.getAttribute( "javax.servlet.error.message" );
-    String request_uri = (String)req.getAttribute( "javax.servlet.error.request_uri" );
-    Throwable exception = (Throwable)req.getAttribute( "javax.servlet.error.exception" );
-    String servlet_name = (String)req.getAttribute( "javax.servlet.error.servlet_name" );
+		Integer status_code = (Integer) req.getAttribute("javax.servlet.error.status_code");
+		String error_message = (String) req.getAttribute("javax.servlet.error.message");
+		String request_uri = (String) req.getAttribute("javax.servlet.error.request_uri");
+		Throwable exception = (Throwable) req.getAttribute("javax.servlet.error.exception");
+		String servlet_name = (String) req.getAttribute("javax.servlet.error.servlet_name");
 
+		log.severe(request_uri + ": " + exception);
 
-    log.severe( request_uri+": "+exception );
+		MyException exc = (MyException) exception;
 
-    MyException exc = (MyException)exception;
+		res.setContentType("application/json;charset=UTF-8");
+		res.setStatus(exc.code);
 
-    res.setContentType( "application/json;charset=UTF-8" );
-    res.setStatus( exc.code );
+		Status st = exc.status;
+		if (st == null)
+			st = Status.FAIL;
 
-    Status st = exc.status;
-    if( st==null )
-      st = Status.FAIL;
+		String s = gson.toJson(st);
+		PrintWriter w = res.getWriter();
+		w.println(s);
+		w.flush();
 
-    String s = gson.toJson( st );
-    PrintWriter w = res.getWriter();
-    w.println( s );
-    w.flush();
-
-  }
+	}
 
 }

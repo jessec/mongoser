@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -50,289 +50,277 @@ import org.apache.lucene.util.Version;
 
 public class Search {
 
-  private static final Logger log = Logger.getLogger( Search.class.getName() );
-  private IndexWriter writer;
-  private static Search mysearch;
-  //private TopScoreDocCollector collector;
-  private StandardAnalyzer analyzer;
-  @SuppressWarnings("unused")
-private String index_path;
-  private Directory index;
-  private boolean commited = false;
-  private SearcherManager sm;
-  private ScheduledFuture<?> alarm;
-  private ScheduledExecutorService service;
-  private ThreadLocal<QueryParser> tl;
+	private static final Logger log = Logger.getLogger(Search.class.getName());
+	private IndexWriter writer;
+	private static Search mysearch;
+	// private TopScoreDocCollector collector;
+	private StandardAnalyzer analyzer;
+	@SuppressWarnings("unused")
+	private String index_path;
+	private Directory index;
+	private boolean commited = false;
+	private SearcherManager sm;
+	private ScheduledFuture<?> alarm;
+	private ScheduledExecutorService service;
+	private ThreadLocal<QueryParser> tl;
 
-  // -------------------------------------------------
-  private Search( String index_path ) throws IOException, ParseException {
+	// -------------------------------------------------
+	private Search(String index_path) throws IOException, ParseException {
 
-    this.index_path = index_path;
-    analyzer = new StandardAnalyzer( Version.LUCENE_36 );
-    tl = new ThreadLocal<QueryParser>(){
-      @Override
-      protected synchronized QueryParser initialValue(){
-	return new QueryParser( Version.LUCENE_36, Config.search_default_field, analyzer );
-      }
-    };
+		this.index_path = index_path;
+		analyzer = new StandardAnalyzer(Version.LUCENE_36);
+		tl = new ThreadLocal<QueryParser>() {
+			@Override
+			protected synchronized QueryParser initialValue() {
+				return new QueryParser(Version.LUCENE_36, Config.search_default_field, analyzer);
+			}
+		};
 
-    File f = new File( index_path );
-    if( !f.exists() )
-      f.mkdir();
-    index = FSDirectory.open( f );
+		File f = new File(index_path);
+		if (!f.exists())
+			f.mkdir();
+		index = FSDirectory.open(f);
 
-    try{
-      sm = new SearcherManager( index, new SearcherFactory() );
-    }
-    catch( IndexNotFoundException e ){
-      log.warning( "No index found. First time use?" );
-      create_writer();
-      writer.commit();
-      sm = new SearcherManager( index, new SearcherFactory() );
-    }
+		try {
+			sm = new SearcherManager(index, new SearcherFactory());
+		} catch (IndexNotFoundException e) {
+			log.warning("No index found. First time use?");
+			create_writer();
+			writer.commit();
+			sm = new SearcherManager(index, new SearcherFactory());
+		}
 
-    final Runnable r = new Runnable(){
-      public void run(){
-	try{
-	  sm.maybeRefresh();
+		final Runnable r = new Runnable() {
+			public void run() {
+				try {
+					sm.maybeRefresh();
+				} catch (IOException e) {
+					log.severe("maybeRefresh() error " + e);
+				}
+			}
+		};
+		service = Executors.newScheduledThreadPool(1);
+		alarm = service.scheduleAtFixedRate(r, 30, 30, MINUTES);
+
 	}
-	catch( IOException e ){
-	  log.severe( "maybeRefresh() error "+e );
+
+	// -------------------------------------------------
+	private void create_writer() throws IOException, CorruptIndexException, LockObtainFailedException {
+
+		if (writer != null)
+			return;
+
+		IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_36, analyzer);
+
+		writer = new IndexWriter(index, config);
+
 	}
-      }
-    };
-    service = Executors.newScheduledThreadPool( 1 );
-    alarm = service.scheduleAtFixedRate( r, 30, 30, MINUTES );
 
-  }
+	// -------------------------------------------------
+	public Search get_writer() throws IOException, CorruptIndexException, LockObtainFailedException {
 
-  // -------------------------------------------------
-  private void create_writer()
-    throws IOException, CorruptIndexException, LockObtainFailedException {
+		if (writer != null)
+			return mysearch;
 
-    if( writer!=null )
-      return;
+		create_writer();
 
-    IndexWriterConfig config = new IndexWriterConfig( Version.LUCENE_36, analyzer );
+		return mysearch;
 
-    writer = new IndexWriter( index, config );
+	}
 
-  }
+	// -------------------------------------------------
+	public static Search get() {
+		return mysearch;
+	}
 
-  // -------------------------------------------------
-  public Search get_writer()
-    throws IOException, CorruptIndexException, LockObtainFailedException {
+	// -------------------------------------------------
+	public Search get_searcher() throws IOException {
 
-    if( writer!=null )
-      return mysearch;
+		if (commited) {
+			sm.maybeRefresh();
+			commited = false;
+		}
 
-    create_writer();
+		return mysearch;
 
-    return mysearch;
+	}
 
-  }
+	// -------------------------------------------------
+	public static Search init(String index_path) throws IOException, ParseException {
 
-  // -------------------------------------------------
-  public static Search get(){
-    return mysearch;
-  }
+		log.info("Search init:" + index_path);
 
-  // -------------------------------------------------
-  public Search get_searcher() throws IOException {
+		if (mysearch != null)
+			return mysearch;
 
-    if( commited ){
-      sm.maybeRefresh();
-      commited = false;
-    }
+		return mysearch = new Search(index_path);
 
-    return mysearch;
+	}
 
-  }
+	// -------------------------------------------------
+	public void _close() throws IOException {
 
-  // -------------------------------------------------
-  public static Search init( String index_path ) throws IOException, ParseException {
+		if (writer != null)
+			writer.close();
+		writer = null;
 
-    log.info( "Search init:"+index_path );
+		sm.close();
+		sm = null;
 
-    if( mysearch!=null )
-      return mysearch;
+		alarm.cancel(true);
+		alarm = null;
+		service.shutdownNow();
+		service = null;
 
-    return mysearch=new Search( index_path );
+	}
 
-  }
+	// -------------------------------------------------
+	public static void close() throws IOException {
 
-  // -------------------------------------------------
-  public void _close() throws IOException {
+		if (mysearch == null)
+			return;
 
-    if( writer!=null )
-      writer.close();
-    writer = null;
+		mysearch._close();
+		mysearch = null;
 
-    sm.close();
-    sm = null;
+	}
 
-    alarm.cancel( true );
-    alarm = null;
-    service.shutdownNow();
-    service = null;
+	// -------------------------------------------------
+	public void add(Document doc) throws IOException {
+		writer.addDocument(doc);
+	}
 
-  }
+	// -------------------------------------------------
+	static void add_searchable_s(Document doc, String k, String v) {
+		Field f = new Field(k, v, Field.Store.NO, Field.Index.ANALYZED);
+		doc.add(f);
+	}
 
-  // -------------------------------------------------
-  public static void close() throws IOException {
+	// -------------------------------------------------
+	static void add_searchable_n(Document doc, String k, int v) {
+		NumericField f = new NumericField(k).setIntValue(v);
+		f.setOmitNorms(true);
+		doc.add(f);
+	}
 
-    if( mysearch==null )
-      return;
+	// -------------------------------------------------
+	static void add_storable(Document doc, String k, String v) {
+		Field f = new Field(k, v, Field.Store.YES, Field.Index.NO);
+		doc.add(f);
+	}
 
-    mysearch._close();
-    mysearch = null;
+	// -------------------------------------------------
+	void commit(Document doc) throws CorruptIndexException, IOException {
+		if (writer != null)
+			writer.addDocument(doc);
+		else
+			log.warning("writer not available");
+	}
 
-  }
+	// -------------------------------------------------
+	void commit() throws CorruptIndexException, IOException {
+		if (writer != null) {
+			writer.commit();
+			commited = true;
+		} else
+			log.warning("writer not available");
+	}
 
-  // -------------------------------------------------
-  public void add( Document doc ) throws IOException {
-    writer.addDocument(doc);
-  }
+	// -------------------------------------------------
+	public void update(String toupdate[], Document doc) throws IOException {
 
-  // -------------------------------------------------
-  static void add_searchable_s( Document doc, String k, String v ){
-    Field f = new Field( k, v, Field.Store.NO, Field.Index.ANALYZED );
-    doc.add( f );
-  }
+		for (String id : toupdate) {
 
-  // -------------------------------------------------
-  static void add_searchable_n( Document doc, String k, int v ){
-    NumericField f = new NumericField( k ).setIntValue(v);
-    f.setOmitNorms( true );
-    doc.add( f );
-  }
+			Term t = new Term("_id", id);
+			writer.updateDocument(t, doc);
 
-  // -------------------------------------------------
-  static void add_storable( Document doc, String k, String v ){
-    Field f = new Field( k, v, Field.Store.YES, Field.Index.NO );
-    doc.add( f );
-  }
+		}
 
-  // -------------------------------------------------
-  void commit( Document doc ) throws CorruptIndexException, IOException {
-    if( writer!=null )
-      writer.addDocument( doc );
-    else
-      log.warning( "writer not available" );
-  }
+	}
 
-  // -------------------------------------------------
-  void commit() throws CorruptIndexException, IOException {
-    if( writer!=null ){
-      writer.commit();
-      commited = true;
-    }
-    else
-      log.warning( "writer not available" );
-  }
-
-  // -------------------------------------------------
-  public void update( String toupdate[], Document doc )
-    throws IOException {
+	// -------------------------------------------------
+	public void delete(String todelete[]) throws IOException {
 
-    for( String id:toupdate ){
+		for (String id : todelete) {
 
-      Term t = new Term( "_id", id );
-      writer.updateDocument( t, doc );
+			Term t = new Term("_id", id);
+			Query q = new TermQuery(t);
+			writer.deleteDocuments(q);
 
-    }
+		}
 
-  }
+	}
 
-  // -------------------------------------------------
-  public void delete( String todelete[] ) throws IOException {
+	// -------------------------------------------------
+	private static Query add_dbid(Query q2, String dbid) {
 
-    for( String id:todelete ){
+		BooleanQuery bq = new BooleanQuery();
 
-      Term t = new Term( "_id", id );
-      Query q = new TermQuery( t );
-      writer.deleteDocuments( q );
+		Term t = new Term("_dbid_", dbid);
+		Query q = new TermQuery(t);
+		bq.add(q, Occur.MUST);
 
-    }
+		bq.add(q2, Occur.MUST);
 
-  }
+		return bq;
 
-  // -------------------------------------------------
-  private static Query add_dbid( Query q2, String dbid ){
+	}
 
-    BooleanQuery bq = new BooleanQuery();
+	// -------------------------------------------------
+	public Document[] search(String dbid, String k, String v, int count) throws IOException, ParseException {
 
-    Term t = new Term( "_dbid_", dbid );
-    Query q = new TermQuery( t );
-    bq.add( q, Occur.MUST );
+		Term t = new Term(k, v);
+		Query q = new TermQuery(t);
+		Query q2 = add_dbid(q, dbid);
 
-    bq.add( q2, Occur.MUST );
+		TopScoreDocCollector collector = TopScoreDocCollector.create(count, true);
+		IndexSearcher searcher = sm.acquire();
+		Document docs[] = null;
 
-    return bq;
+		try {
+			searcher.search(q2, collector);
+			ScoreDoc[] hits = collector.topDocs().scoreDocs;
+			if (hits.length == 0)
+				return null;
+			docs = new Document[hits.length];
+			for (int i = 0; i < hits.length; i++) {
+				int doc_id = hits[i].doc;
+				docs[i] = searcher.doc(doc_id);
+			}
+		} finally {
+			sm.release(searcher);
+		}
 
-  }
+		return docs;
 
-  // -------------------------------------------------
-  public Document[] search( String dbid, String k, String v, int count )
-    throws IOException, ParseException {
+	}
 
+	// -------------------------------------------------
+	public Document[] search2(String dbid, String q, int count) throws IOException, ParseException {
 
-    Term t = new Term( k, v );
-    Query q = new TermQuery( t );
-    Query q2 = add_dbid( q, dbid );
+		Query query = tl.get().parse(QueryParser.escape(q));
+		Query q2 = add_dbid(query, dbid);
 
-    TopScoreDocCollector collector = TopScoreDocCollector.create( count, true );
-    IndexSearcher searcher = sm.acquire();
-    Document docs[] = null;
+		TopScoreDocCollector collector = TopScoreDocCollector.create(count, true);
+		IndexSearcher searcher = sm.acquire();
+		Document docs[] = null;
 
-    try{
-      searcher.search( q2, collector );
-      ScoreDoc[] hits = collector.topDocs().scoreDocs;
-      if( hits.length==0 )
-	return null;
-      docs = new Document[hits.length];
-      for( int i=0; i<hits.length; i++ ){
-	int doc_id = hits[i].doc;
-	docs[i] = searcher.doc( doc_id );
-      }
-    }
-    finally{
-      sm.release( searcher );
-    }
+		try {
+			searcher.search(q2, collector);
+			ScoreDoc[] hits = collector.topDocs().scoreDocs;
+			if (hits.length == 0)
+				return null;
+			docs = new Document[hits.length];
+			for (int i = 0; i < hits.length; i++) {
+				int doc_id = hits[i].doc;
+				docs[i] = searcher.doc(doc_id);
+			}
+		} finally {
+			sm.release(searcher);
+		}
 
-    return docs;
+		return docs;
 
-  }
-
-  // -------------------------------------------------
-  public Document[] search2( String dbid, String q, int count )
-    throws IOException, ParseException {
-
-
-    Query query = tl.get().parse( QueryParser.escape(q) );
-    Query q2 = add_dbid( query, dbid );
-
-    TopScoreDocCollector collector = TopScoreDocCollector.create( count, true );
-    IndexSearcher searcher = sm.acquire();
-    Document docs[] = null;
-
-    try{
-      searcher.search( q2, collector );
-      ScoreDoc[] hits = collector.topDocs().scoreDocs;
-      if( hits.length==0 )
-	return null;
-      docs = new Document[hits.length];
-      for( int i=0; i<hits.length; i++ ){
-	int doc_id = hits[i].doc;
-	docs[i] = searcher.doc( doc_id );
-      }
-    }
-    finally{
-      sm.release( searcher );
-    }
-
-    return docs;
-
-  }
+	}
 
 }

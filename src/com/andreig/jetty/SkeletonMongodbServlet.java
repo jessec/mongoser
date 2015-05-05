@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -29,235 +29,225 @@ import com.mongodb.Mongo;
 @SuppressWarnings("serial")
 public class SkeletonMongodbServlet extends HttpServlet {
 
-  private static final Logger log = Logger.getLogger( SkeletonMongodbServlet.class.getName() );
+	private static final Logger log = Logger.getLogger(SkeletonMongodbServlet.class.getName());
 
-  protected Mongo mongo = MongoDB.get();
-  protected MyCache cache = null;
-  protected Search search = null;
-  private final boolean do_auth = Config.auth;
-  static final Pattern pattern = Pattern.compile( "^/([^/]+)(?:/([^/]+))?/?$" );
+	protected Mongo mongo = MongoDB.get();
+	protected MyCache cache = null;
+	protected Search search = null;
+	private final boolean do_auth = Config.auth;
+	static final Pattern pattern = Pattern.compile("^/([^/]+)(?:/([^/]+))?/?$");
 
+	// --------------------------------
+	protected void out_xml(HttpServletRequest req, Object o) {
+		req.setAttribute("what", OutputFilter.XML);
+		req.setAttribute("value", o);
+	}
 
-  // --------------------------------
-  protected void out_xml( HttpServletRequest req, Object o ){
-    req.setAttribute( "what", OutputFilter.XML );
-    req.setAttribute( "value", o );
-  }
+	// --------------------------------
+	protected void out_json(HttpServletRequest req, Object o) {
+		req.setAttribute("what", OutputFilter.JSON);
+		req.setAttribute("value", o);
+	}
 
-  // --------------------------------
-  protected void out_json( HttpServletRequest req, Object o ){
-    req.setAttribute( "what", OutputFilter.JSON );
-    req.setAttribute( "value", o );
-  }
+	// --------------------------------
+	protected void out_str(HttpServletRequest req, String s, String content_type) {
+		req.setAttribute("type", content_type);
+		out_str(req, s);
+	}
 
-  // --------------------------------
-  protected void out_str( HttpServletRequest req, String s, String content_type ){
-    req.setAttribute( "type", content_type );
-    out_str( req, s );
-  }
+	// --------------------------------
+	protected void out_str(HttpServletRequest req, String s) {
+		req.setAttribute("what", OutputFilter.STR);
+		req.setAttribute("value", s);
+	}
 
-  // --------------------------------
-  protected void out_str( HttpServletRequest req, String s ){
-    req.setAttribute( "what", OutputFilter.STR );
-    req.setAttribute( "value", s );
-  }
+	// --------------------------------
+	protected void out(HttpServletRequest req) {
+		req.setAttribute("what", OutputFilter.EMPTY);
+	}
 
-  // --------------------------------
-  protected void out( HttpServletRequest req ){
-    req.setAttribute( "what", OutputFilter.EMPTY );
-  }
+	// --------------------------------
+	protected void check_null(Object o) {
 
-  // --------------------------------
-  protected void check_null( Object o ){
+		if (o == null)
+			throw new MyException(SC_BAD_REQUEST);
 
-    if( o==null )
-      throw new MyException( SC_BAD_REQUEST );
+	}
 
-  }
+	// --------------------------------
+	protected boolean can_write(HttpServletRequest req) {
 
-  // --------------------------------
-  protected boolean can_write( HttpServletRequest req ){
+		if (!do_auth)
+			return true;
 
-    if( !do_auth )
-      return true;
+		boolean b = req.isUserInRole("mongoreadwrite") || req.isUserInRole("admin");
 
-    boolean b = req.isUserInRole( "mongoreadwrite" )||req.isUserInRole( "admin" );
+		return b;
 
-    return b;
+	}
 
-  }
+	// --------------------------------
+	protected boolean can_read(HttpServletRequest req) {
 
-  // --------------------------------
-  protected boolean can_read( HttpServletRequest req ){
+		if (!do_auth)
+			return true;
 
-    if( !do_auth )
-      return true;
+		boolean b = req.isUserInRole("mongoreadwrite") || req.isUserInRole("admin") || req.isUserInRole("mongoreadonly");
 
-    boolean b =
-      req.isUserInRole( "mongoreadwrite" )||req.isUserInRole( "admin" )||req.isUserInRole( "mongoreadonly" );
+		return b;
 
-    return b;
+	}
 
-  }
+	// --------------------------------
+	protected boolean can_admin(HttpServletRequest req) {
 
-  // --------------------------------
-  protected boolean can_admin( HttpServletRequest req ){
+		if (!do_auth)
+			return true;
 
-    if( !do_auth )
-      return true;
+		return req.isUserInRole("admin");
 
-    return req.isUserInRole( "admin" );
+	}
 
-  }
+	// --------------------------------
+	String[] req2mongonames(HttpServletRequest req) {
 
-  // --------------------------------
-  String[] req2mongonames( HttpServletRequest req ){
+		String pi = req.getPathInfo();
+		if (pi == null)
+			return null;
 
-    String pi = req.getPathInfo();
-    if( pi==null )
-      return null;
+		Matcher m = pattern.matcher(pi);
 
-    Matcher m = pattern.matcher( pi );
+		String paths[] = null;
 
-    String paths[] = null;
+		if (m.find()) {
+			paths = new String[2];
+			paths[0] = m.group(1);
+			paths[1] = m.group(2);
+		}
 
-    if( m.find() ){
-      paths = new String[2];
-      paths[0] = m.group( 1 );
-      paths[1] = m.group( 2 );
-    }
+		return paths;
 
-    return paths;
+	}
 
-  }
+	// --------------------------------
+	protected void error(HttpServletResponse res, int code, Status st) throws IOException {
 
-  // --------------------------------
-  protected void error( HttpServletResponse res, int code, Status st )
-    throws IOException {
+		res.setContentType("application/json;charset=UTF-8");
+		res.setStatus(code);
+		PrintWriter w = res.getWriter();
+		w.println(Status.to_json(st));
+		w.flush();
 
-    res.setContentType( "application/json;charset=UTF-8" );
-    res.setStatus( code );
-    PrintWriter w = res.getWriter();
-    w.println( Status.to_json(st) );
-    w.flush();
+	}
 
-  }
+	// --------------------------------
+	protected String get_param(HttpServletRequest req, String key) {
 
-  // --------------------------------
-  protected String get_param( HttpServletRequest req, String key ){
+		String v = req.getParameter(key);
+		if (v == null || v.length() == 0)
+			throw new MyException(SC_BAD_REQUEST, Status.get("missing param:" + key));
 
-    String v = req.getParameter( key );
-    if( v==null || v.length()==0 )
-      throw new MyException( SC_BAD_REQUEST, Status.get("missing param:"+key) );
+		return v;
 
-    return v;
+	}
 
-  }
+	// --------------------------------
+	@Override
+	public void init() throws ServletException {
 
-  // --------------------------------
-  @Override
-  public void init() throws ServletException{
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("default init() " + name);
 
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "default init() "+name );
+		if (Config.memcached) {
+			cache = MyCache.get();
+		}
+		if (Config.search) {
+			search = Search.get();
+		}
 
-    if( Config.memcached ){
-      cache = MyCache.get();
-    }
-    if( Config.search ){
-      search = Search.get();
-    }
+	}
 
-  }
+	// --------------------------------
+	@Override
+	public void destroy() {
 
-  // --------------------------------
-  @Override
-  public void destroy(){
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("destroy() " + name);
 
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "destroy() "+name );
+	}
 
-  }
+	// POST
+	// ------------------------------------
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-  // POST
-  // ------------------------------------
-  @Override
-  protected void doPost(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
+		log.fine("default doPost()");
+		resp.sendError(SC_METHOD_NOT_ALLOWED);
 
-    log.fine( "default doPost()" );
-    resp.sendError(  SC_METHOD_NOT_ALLOWED );
+	}
 
-  }
+	// GET
+	// ------------------------------------
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-  // GET
-  // ------------------------------------
-  @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
+		log.fine("default doGet()");
+		resp.sendError(SC_METHOD_NOT_ALLOWED);
 
-    log.fine( "default doGet()" );
-    resp.sendError(  SC_METHOD_NOT_ALLOWED );
+	}
 
-  }
+	// DELETE
+	// ------------------------------------
+	@Override
+	protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-  // DELETE
-  // ------------------------------------
-  @Override
-  protected void doDelete(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
+		log.fine("default doDelete()");
+		resp.sendError(SC_METHOD_NOT_ALLOWED);
 
-    log.fine( "default doDelete()" );
-    resp.sendError(  SC_METHOD_NOT_ALLOWED );
+	}
 
-  }
+	// HEAD
+	// ------------------------------------
+	@Override
+	protected void doHead(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-  // HEAD
-  // ------------------------------------
-  @Override
-  protected void doHead(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
+		log.fine("default doHead()");
+		resp.sendError(SC_METHOD_NOT_ALLOWED);
 
-    log.fine( "default doHead()" );
-    resp.sendError(  SC_METHOD_NOT_ALLOWED );
+	}
 
-  }
+	// OPTIONS
+	// ------------------------------------
+	@Override
+	protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-  // OPTIONS
-  // ------------------------------------
-  @Override
-  protected void doOptions(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
+		log.fine("default doOptions()");
+		resp.sendError(SC_METHOD_NOT_ALLOWED);
 
-    log.fine( "default doOptions()" );
-    resp.sendError(  SC_METHOD_NOT_ALLOWED );
+	}
 
-  }
+	// PUT
+	// ------------------------------------
+	@Override
+	protected void doPut(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-  // PUT
-  // ------------------------------------
-  @Override
-  protected void doPut(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
+		log.fine("default doPut()");
+		resp.sendError(SC_METHOD_NOT_ALLOWED);
 
-    log.fine( "default doPut()" );
-    resp.sendError(  SC_METHOD_NOT_ALLOWED );
+	}
 
-  }
+	// TRACE
+	// ------------------------------------
+	@Override
+	protected void doTrace(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-  // TRACE
-  // ------------------------------------
-  @Override
-  protected void doTrace(HttpServletRequest req, HttpServletResponse resp)
-    throws ServletException, IOException {
+		log.fine("default doTrace()");
+		resp.sendError(SC_METHOD_NOT_ALLOWED);
 
-    log.fine( "default doTrace()" );
-    resp.sendError(  SC_METHOD_NOT_ALLOWED );
-
-  }
+	}
 
 }

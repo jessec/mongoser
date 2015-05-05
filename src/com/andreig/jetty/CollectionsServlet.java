@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -30,158 +30,152 @@ import com.mongodb.DB;
 import com.mongodb.DBCollection;
 
 @SuppressWarnings("serial")
-@WebServlet(name="CollectionsServlet")
+@WebServlet(name = "CollectionsServlet")
 public class CollectionsServlet extends SkeletonMongodbServlet {
 
-  private static final Logger log = Logger.getLogger( CollectionsServlet.class.getName() );
+	private static final Logger log = Logger.getLogger(CollectionsServlet.class.getName());
 
-  // --------------------------------
-  @SuppressWarnings("unused")
-@Override
-  public void init() throws ServletException{
+	// --------------------------------
+	@SuppressWarnings("unused")
+	@Override
+	public void init() throws ServletException {
 
-    ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "init() "+name );
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("init() " + name);
 
-  }
+	}
 
-  // --------------------------------
-  @Override
-  public void destroy(){
+	// --------------------------------
+	@Override
+	public void destroy() {
 
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "destroy() "+name );
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("destroy() " + name);
 
-  }
+	}
 
-  // PUT
-  // ------------------------------------
-  @Override
-  protected void doPut(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	// PUT
+	// ------------------------------------
+	@Override
+	protected void doPut(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    log.fine( "doPut()" );
+		log.fine("doPut()");
 
-    if( !can_write(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		if (!can_write(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      String names[]  = req2mongonames( req );
-      if( names!=null ){
-	db_name = names[0];
-	col_name = names[1];
-      }
-      if( db_name==null || col_name==null ){
-	error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-	return;
-      }
-    }
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			String names[] = req2mongonames(req);
+			if (names != null) {
+				db_name = names[0];
+				col_name = names[1];
+			}
+			if (db_name == null || col_name == null) {
+				error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+				return;
+			}
+		}
 
-    DB db = mongo.getDB( db_name );
-    db.createCollection( col_name, null );
+		DB db = mongo.getDB(db_name);
+		db.createCollection(col_name, null);
 
-    res.setStatus( SC_CREATED );
+		res.setStatus(SC_CREATED);
 
-  }
+	}
 
-  // DELETE
-  // ------------------------------------
-  @Override
-  protected void doDelete(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	// DELETE
+	// ------------------------------------
+	@Override
+	protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    log.fine( "doDelete()" );
+		log.fine("doDelete()");
 
-    if( !can_admin(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		if (!can_admin(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      String names[]  = req2mongonames( req );
-      if( names!=null ){
-	db_name = names[0];
-	col_name = names[1];
-      }
-      if( db_name==null || col_name==null ){
-	error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-	return;
-      }
-    }
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			String names[] = req2mongonames(req);
+			if (names != null) {
+				db_name = names[0];
+				col_name = names[1];
+			}
+			if (db_name == null || col_name == null) {
+				error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+				return;
+			}
+		}
 
-    DB db = mongo.getDB( db_name );
-    DBCollection col = db.getCollection( col_name );
-    col.drop();
-    res.setStatus( SC_OK );
+		DB db = mongo.getDB(db_name);
+		DBCollection col = db.getCollection(col_name);
+		col.drop();
+		res.setStatus(SC_OK);
 
-  }
+	}
 
-  // GET
-  // ------------------------------------
-  @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	// GET
+	// ------------------------------------
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    log.fine( "doGet()" );
+		log.fine("doGet()");
 
-    if( !can_read(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		if (!can_read(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    String db_name = req.getParameter( "dbname" );
-    String op = req.getParameter( "op" );
-    if( db_name==null ){
-      String names[]  = req2mongonames( req );
-      if( names!=null ){
-	db_name = names[0];
-      }
-      if( db_name==null ){
-	error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-	return;
-      }
-    }
+		String db_name = req.getParameter("dbname");
+		String op = req.getParameter("op");
+		if (db_name == null) {
+			String names[] = req2mongonames(req);
+			if (names != null) {
+				db_name = names[0];
+			}
+			if (db_name == null) {
+				error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+				return;
+			}
+		}
 
-    if( op==null )
-      op = "list";
+		if (op == null)
+			op = "list";
 
-    DB db = mongo.getDB( db_name );
+		DB db = mongo.getDB(db_name);
 
-    if( "list".equals(op) ){
-      Set<String> cols = db.getCollectionNames();
-      out_json( req, cols );
-      return;
-    }
+		if ("list".equals(op)) {
+			Set<String> cols = db.getCollectionNames();
+			out_json(req, cols);
+			return;
+		}
 
-    // requires colname
-    String col_name = req.getParameter( "colname" );
-    if( col_name==null ){
-      error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-      return;
-    }
-    DBCollection col = db.getCollection( col_name );
+		// requires colname
+		String col_name = req.getParameter("colname");
+		if (col_name == null) {
+			error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+			return;
+		}
+		DBCollection col = db.getCollection(col_name);
 
-    if( "count".equals(op) ){
-      out_str( req, "{\"count\":"+col.count()+"}", "application/json" );
-    }
-    else if( "stats".equals(op) ){
-      BasicBSONObject o = col.getStats();
-      out_str( req, o.toString(), "application/json" );
-      return;
-    }
-    else
-      res.sendError(  SC_BAD_REQUEST );
+		if ("count".equals(op)) {
+			out_str(req, "{\"count\":" + col.count() + "}", "application/json");
+		} else if ("stats".equals(op)) {
+			BasicBSONObject o = col.getStats();
+			out_str(req, o.toString(), "application/json");
+			return;
+		} else
+			res.sendError(SC_BAD_REQUEST);
 
-  }
-
+	}
 
 }

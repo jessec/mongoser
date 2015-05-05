@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -15,32 +15,31 @@ import java.util.Map;
 
 import com.google.gson.Gson;
 
-public class Status{
+public class Status {
 
-  private static Gson gson = new Gson();
+	private static Gson gson = new Gson();
 
-  public  final static Status OK = new Status( "success" );
-  public  final static Status FAIL = new Status( "fail" );
-  String status;
+	public final static Status OK = new Status("success");
+	public final static Status FAIL = new Status("fail");
+	String status;
 
-  static private final Map<String,Status> _cache = Collections.synchronizedMap(
-      new HashMap<String,Status>() );
+	static private final Map<String, Status> _cache = Collections.synchronizedMap(new HashMap<String, Status>());
 
-  public static Status get( String status ){
-    Status st = _cache.get( status );
-    if( st!=null )
-      return st;
-    st = new Status( status );
-    _cache.put( status, st );
-    return st;
-  }
+	public static Status get(String status) {
+		Status st = _cache.get(status);
+		if (st != null)
+			return st;
+		st = new Status(status);
+		_cache.put(status, st);
+		return st;
+	}
 
-  private Status( String status ){
-    this.status = status;
-  }
+	private Status(String status) {
+		this.status = status;
+	}
 
-  public static String to_json( Status st ){
-    return gson.toJson( st );
-  }
+	public static String to_json(Status st) {
+		return gson.toJson(st);
+	}
 
 }

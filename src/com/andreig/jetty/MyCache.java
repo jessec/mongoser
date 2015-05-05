@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -26,104 +26,101 @@ import net.spy.memcached.internal.OperationFuture;
 
 public class MyCache extends MemcachedClient {
 
-  private static final Logger log = Logger.getLogger( MyCache.class.getName() );
-  private static int expire;
+	private static final Logger log = Logger.getLogger(MyCache.class.getName());
+	private static int expire;
 
-  private static MyCache _memcached_client = null;
+	private static MyCache _memcached_client = null;
 
-  // -------------------------------------------
-  private MyCache( ConnectionFactory fact, List<InetSocketAddress> addrs )
-    throws IOException {
+	// -------------------------------------------
+	private MyCache(ConnectionFactory fact, List<InetSocketAddress> addrs) throws IOException {
 
-    super( fact, addrs );
+		super(fact, addrs);
 
-  }
+	}
 
-  // -------------------------------------------
-  public static boolean check_connection( InetSocketAddress adr ){
+	// -------------------------------------------
+	public static boolean check_connection(InetSocketAddress adr) {
 
-    Socket sock = null;
-    boolean reachable = false;
+		Socket sock = null;
+		boolean reachable = false;
 
-    try {
-      sock = new Socket( adr.getHostName(), adr.getPort() );
-      reachable = true;
-    }
-    catch( UnknownHostException e ){
-      log.warning( "Memcached failed:"+e );
-    }
-    catch( IOException e ){
-      log.warning( "Memcached failed:"+e );
-    }
-    finally {
-      if( sock!=null ) try{sock.close();}catch(IOException e){}
-    }
+		try {
+			sock = new Socket(adr.getHostName(), adr.getPort());
+			reachable = true;
+		} catch (UnknownHostException e) {
+			log.warning("Memcached failed:" + e);
+		} catch (IOException e) {
+			log.warning("Memcached failed:" + e);
+		} finally {
+			if (sock != null)
+				try {
+					sock.close();
+				} catch (IOException e) {
+				}
+		}
 
-    return reachable;
+		return reachable;
 
-  }
+	}
 
-  // -------------------------------------------
-  static MyCache get(){
+	// -------------------------------------------
+	static MyCache get() {
 
-    log.fine( "cache get" );
+		log.fine("cache get");
 
-    if( _memcached_client!=null )
-      return _memcached_client;
+		if (_memcached_client != null)
+			return _memcached_client;
 
-    // example server1:11211 server2:11211
-    List<InetSocketAddress> adrs = AddrUtil.getAddresses( Config.memcached_servers );
-    List<InetSocketAddress> myadrs = new ArrayList<InetSocketAddress>();
+		// example server1:11211 server2:11211
+		List<InetSocketAddress> adrs = AddrUtil.getAddresses(Config.memcached_servers);
+		List<InetSocketAddress> myadrs = new ArrayList<InetSocketAddress>();
 
-    for( InetSocketAddress adr:adrs ){
+		for (InetSocketAddress adr : adrs) {
 
-      if( !check_connection(adr) ){
-	log.severe( "IMPORTANT !!! Could not reach memcache server "+adr );
-      }
-      else
-	myadrs.add( adr );
+			if (!check_connection(adr)) {
+				log.severe("IMPORTANT !!! Could not reach memcache server " + adr);
+			} else
+				myadrs.add(adr);
 
-    }
+		}
 
-    if( myadrs.size()==0 ){
-      log.severe( "No available memcached servers, disabling memcache" );
-      _memcached_client = null;
-      return null;
-    }
+		if (myadrs.size() == 0) {
+			log.severe("No available memcached servers, disabling memcache");
+			_memcached_client = null;
+			return null;
+		}
 
-    try{
-      _memcached_client = new MyCache( new BinaryConnectionFactory(), myadrs );
-    }
-    catch( IOException e ){
-      log.severe( "could not init memcached client:"+e );
-    }
-    if( Config.memcached_expire==0||(Config.memcached_expire>60*60*24*30))
-      expire = 60*60*24*30;
-    else
-      expire = Config.memcached_expire;
+		try {
+			_memcached_client = new MyCache(new BinaryConnectionFactory(), myadrs);
+		} catch (IOException e) {
+			log.severe("could not init memcached client:" + e);
+		}
+		if (Config.memcached_expire == 0 || (Config.memcached_expire > 60 * 60 * 24 * 30))
+			expire = 60 * 60 * 24 * 30;
+		else
+			expire = Config.memcached_expire;
 
-    log.info( "Memcached:"+myadrs );
+		log.info("Memcached:" + myadrs);
 
-    return _memcached_client;
+		return _memcached_client;
 
-  }
+	}
 
-  // ----------------------------
-  public OperationFuture<Boolean> set( String key, Object o ){
-    return super.set( key, expire, o );
-  }
+	// ----------------------------
+	public OperationFuture<Boolean> set(String key, Object o) {
+		return super.set(key, expire, o);
+	}
 
-  // ----------------------------
-  @Override
-  public void  connectionEstablished( SocketAddress sa, int reconnectCount ){
-    log.fine( "connectionEstablished()" );
-  }
+	// ----------------------------
+	@Override
+	public void connectionEstablished(SocketAddress sa, int reconnectCount) {
+		log.fine("connectionEstablished()");
+	}
 
-  // ----------------------------
-  @Override
-  public void connectionLost( SocketAddress sa ){
-    log.fine( "connectionLost()" );
-  }
-
+	// ----------------------------
+	@Override
+	public void connectionLost(SocketAddress sa) {
+		log.fine("connectionLost()");
+	}
 
 }

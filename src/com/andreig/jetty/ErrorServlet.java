@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -18,28 +18,26 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-
 @SuppressWarnings("serial")
-@WebServlet(name="ErrorServlet")
+@WebServlet(name = "ErrorServlet")
 public class ErrorServlet extends HttpServlet {
 
-  private static final Logger log = Logger.getLogger( ErrorServlet.class.getName() );
+	private static final Logger log = Logger.getLogger(ErrorServlet.class.getName());
 
-  // --------------------------------
-  @Override
-  public void init() throws ServletException{
-    log.fine( "inited" );
-    super.init();
-  }
+	// --------------------------------
+	@Override
+	public void init() throws ServletException {
+		log.fine("inited");
+		super.init();
+	}
 
-  // ------------------------------------
+	// ------------------------------------
 
-  @Override
-  protected void service(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	@Override
+	protected void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    // Nothing
+		// Nothing
 
-  }
+	}
 
 }

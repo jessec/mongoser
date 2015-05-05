@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -23,30 +23,28 @@ import javax.servlet.http.HttpServletResponse;
 
 public class InputFilter implements Filter {
 
-  private static final Logger log = Logger.getLogger( InputFilter.class.getName() );
+	private static final Logger log = Logger.getLogger(InputFilter.class.getName());
 
+	// --------------------------------
+	public void init(FilterConfig config) {
+		log.fine("start InputFilter");
+	}
 
-  // --------------------------------
-  public void init( FilterConfig config ){
-    log.fine( "start InputFilter" );
-  }
+	// --------------------------------
+	public void doFilter(ServletRequest _req, ServletResponse _res, FilterChain chain) throws ServletException, IOException {
 
-  // --------------------------------
-  public void doFilter( ServletRequest _req, ServletResponse _res, FilterChain chain )
-    throws ServletException, IOException {
+		log.fine("doFilter()");
 
-    log.fine( "doFilter()" );
+		HttpServletRequest req = (HttpServletRequest) _req;
+		HttpServletResponse res = (HttpServletResponse) _res;
 
-    HttpServletRequest req = (HttpServletRequest)_req;
-    HttpServletResponse res = (HttpServletResponse)_res;
+		chain.doFilter(req, res);
 
-    chain.doFilter( req, res );
+	}
 
-  }
-
-  // --------------------------------
-  public void destroy(){
-    log.fine( "stop InputFilter" );
-  }
+	// --------------------------------
+	public void destroy() {
+		log.fine("stop InputFilter");
+	}
 
 }

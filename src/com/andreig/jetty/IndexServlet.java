@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -34,209 +34,202 @@ import com.mongodb.util.JSON;
 import com.mongodb.util.JSONParseException;
 
 @SuppressWarnings("serial")
-@WebServlet(name="IndexServlet")
+@WebServlet(name = "IndexServlet")
 public class IndexServlet extends SkeletonMongodbServlet {
 
-  private static final Logger log = Logger.getLogger( IndexServlet.class.getName() );
+	private static final Logger log = Logger.getLogger(IndexServlet.class.getName());
 
-  // --------------------------------
-  @Override
-  public void init() throws ServletException{
+	// --------------------------------
+	@Override
+	public void init() throws ServletException {
 
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "init() "+name );
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("init() " + name);
 
-  }
+	}
 
-  // --------------------------------
-  @Override
-  public void destroy(){
+	// --------------------------------
+	@Override
+	public void destroy() {
 
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "destroy() "+name );
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("destroy() " + name);
 
-  }
+	}
 
-  // PUT
-  // ------------------------------------
-  @Override
-  protected void doPut(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	// PUT
+	// ------------------------------------
+	@Override
+	protected void doPut(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    log.fine( "doPut()" );
+		log.fine("doPut()");
 
-    if( !can_admin(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		if (!can_admin(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    InputStream is = req.getInputStream();
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-      return;
-    }
+		InputStream is = req.getInputStream();
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+			return;
+		}
 
-    DB db = mongo.getDB( db_name );
+		DB db = mongo.getDB(db_name);
 
-    // mongo auth
-    String user = req.getParameter( "user" );
-    String passwd = req.getParameter( "passwd" );
-    if( user!=null&&passwd!=null&&(!db.isAuthenticated()) ){
-      boolean auth = db.authenticate( user, passwd.toCharArray() );
-      if( !auth ){
-	res.sendError( SC_UNAUTHORIZED );
-	return;
-      }
-    }
+		// mongo auth
+		String user = req.getParameter("user");
+		String passwd = req.getParameter("passwd");
+		if (user != null && passwd != null && (!db.isAuthenticated())) {
+			boolean auth = db.authenticate(user, passwd.toCharArray());
+			if (!auth) {
+				res.sendError(SC_UNAUTHORIZED);
+				return;
+			}
+		}
 
-    DBCollection col = db.getCollection( col_name );
+		DBCollection col = db.getCollection(col_name);
 
-    BufferedReader r = null;
-    String data = null;
+		BufferedReader r = null;
+		String data = null;
 
-    try{
+		try {
 
-      r = new BufferedReader( new InputStreamReader(is) );
-      data = r.readLine();
+			r = new BufferedReader(new InputStreamReader(is));
+			data = r.readLine();
 
-    }
-    finally{
-      if( r!=null )
-	r.close();
-    }
-    if( data==null ){
-      error( res, SC_BAD_REQUEST, Status.get("no data") );
-      return;
-    }
+		} finally {
+			if (r != null)
+				r.close();
+		}
+		if (data == null) {
+			error(res, SC_BAD_REQUEST, Status.get("no data"));
+			return;
+		}
 
-    DBObject o = null;
-    try{
-      o = (DBObject)JSON.parse( data );
-    }
-    catch( JSONParseException e ){
-      error( res, SC_BAD_REQUEST, Status.get("can not parse data") );
-      return;
-    }
+		DBObject o = null;
+		try {
+			o = (DBObject) JSON.parse(data);
+		} catch (JSONParseException e) {
+			error(res, SC_BAD_REQUEST, Status.get("can not parse data"));
+			return;
+		}
 
-    col.createIndex( o );
+		col.createIndex(o);
 
-    res.setStatus( SC_CREATED );
+		res.setStatus(SC_CREATED);
 
-  }
+	}
 
-  // DELETE
-  // ------------------------------------
-  @Override
-  protected void doDelete(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	// DELETE
+	// ------------------------------------
+	@Override
+	protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    log.fine( "doDelete()" );
+		log.fine("doDelete()");
 
-    if( !can_admin(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		if (!can_admin(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    InputStream is = req.getInputStream();
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-      return;
-    }
+		InputStream is = req.getInputStream();
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+			return;
+		}
 
-    BufferedReader r = null;
-    String data = null;
+		BufferedReader r = null;
+		String data = null;
 
-    try{
+		try {
 
-      r = new BufferedReader( new InputStreamReader(is) );
-      data = r.readLine();
+			r = new BufferedReader(new InputStreamReader(is));
+			data = r.readLine();
 
-    }
-    finally{
-      if( r!=null )
-	r.close();
-    }
-    if( data==null ){
-      error( res, SC_BAD_REQUEST, Status.get("no data") );
-      return;
-    }
+		} finally {
+			if (r != null)
+				r.close();
+		}
+		if (data == null) {
+			error(res, SC_BAD_REQUEST, Status.get("no data"));
+			return;
+		}
 
-    DBObject o = null;
-    try{
-      o = (DBObject)JSON.parse( data );
-    }
-    catch( JSONParseException e ){
-      error( res, SC_BAD_REQUEST, Status.get("can not parse data") );
-      return;
-    }
+		DBObject o = null;
+		try {
+			o = (DBObject) JSON.parse(data);
+		} catch (JSONParseException e) {
+			error(res, SC_BAD_REQUEST, Status.get("can not parse data"));
+			return;
+		}
 
-    DB db = mongo.getDB( db_name );
+		DB db = mongo.getDB(db_name);
 
-    // mongo auth
-    String user = req.getParameter( "user" );
-    String passwd = req.getParameter( "passwd" );
-    if( user!=null&&passwd!=null&&(!db.isAuthenticated()) ){
-      boolean auth = db.authenticate( user, passwd.toCharArray() );
-      if( !auth ){
-	res.sendError( SC_UNAUTHORIZED );
-	return;
-      }
-    }
+		// mongo auth
+		String user = req.getParameter("user");
+		String passwd = req.getParameter("passwd");
+		if (user != null && passwd != null && (!db.isAuthenticated())) {
+			boolean auth = db.authenticate(user, passwd.toCharArray());
+			if (!auth) {
+				res.sendError(SC_UNAUTHORIZED);
+				return;
+			}
+		}
 
-    DBCollection col = db.getCollection( col_name );
+		DBCollection col = db.getCollection(col_name);
 
-    col.dropIndex( o );
+		col.dropIndex(o);
 
-    res.setStatus( SC_OK );
+		res.setStatus(SC_OK);
 
-  }
+	}
 
-  // GET
-  // ------------------------------------
-  @Override
-  protected void doGet(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+	// GET
+	// ------------------------------------
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    log.fine( "doGet()" );
+		log.fine("doGet()");
 
-    if( !can_read(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		if (!can_read(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-      return;
-    }
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+			return;
+		}
 
-    DB db = mongo.getDB( db_name );
+		DB db = mongo.getDB(db_name);
 
-    // mongo auth
-    String user = req.getParameter( "user" );
-    String passwd = req.getParameter( "passwd" );
-    if( user!=null&&passwd!=null&&(!db.isAuthenticated()) ){
-      boolean auth = db.authenticate( user, passwd.toCharArray() );
-      if( !auth ){
-	res.sendError( SC_UNAUTHORIZED );
-	return;
-      }
-    }
+		// mongo auth
+		String user = req.getParameter("user");
+		String passwd = req.getParameter("passwd");
+		if (user != null && passwd != null && (!db.isAuthenticated())) {
+			boolean auth = db.authenticate(user, passwd.toCharArray());
+			if (!auth) {
+				res.sendError(SC_UNAUTHORIZED);
+				return;
+			}
+		}
 
-    DBCollection col = db.getCollection( col_name );
+		DBCollection col = db.getCollection(col_name);
 
-    List<DBObject> info = col.getIndexInfo();
-    out_json( req, info );
+		List<DBObject> info = col.getIndexInfo();
+		out_json(req, info);
 
-  }
+	}
 
 }

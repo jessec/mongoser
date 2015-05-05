@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -27,144 +27,133 @@ import com.mongodb.MongoException;
 
 public class MyErrorHandler extends ErrorPageErrorHandler {
 
-  private static final Logger log = Logger.getLogger( MyErrorHandler.class.getName() );
+	private static final Logger log = Logger.getLogger(MyErrorHandler.class.getName());
 
-  // -------------------------------------------
-  public MyErrorHandler(){
-    super();
-  }
+	// -------------------------------------------
+	public MyErrorHandler() {
+		super();
+	}
 
-  // -------------------------------------------
-  @Override
-  public void handle( String target, Request base_request,
-    HttpServletRequest req, HttpServletResponse res ) throws IOException {
+	// -------------------------------------------
+	@Override
+	public void handle(String target, Request base_request, HttpServletRequest req, HttpServletResponse res) throws IOException {
 
-    log.fine("handle");
+		log.fine("handle");
 
-    Class<?> ex_class = (Class<?>)req.getAttribute( Dispatcher.ERROR_EXCEPTION_TYPE );
+		Class<?> ex_class = (Class<?>) req.getAttribute(Dispatcher.ERROR_EXCEPTION_TYPE);
 
-    if( MyException.class.equals(ex_class) ){
+		if (MyException.class.equals(ex_class)) {
 
-      MyException exc = (MyException)req.getAttribute(Dispatcher.ERROR_EXCEPTION);
+			MyException exc = (MyException) req.getAttribute(Dispatcher.ERROR_EXCEPTION);
 
-      res.setContentType( "application/json;charset=UTF-8" );
-      res.setStatus( exc.code );
+			res.setContentType("application/json;charset=UTF-8");
+			res.setStatus(exc.code);
 
-      Status st = exc.status;
-      if( st==null )
-	st = Status.FAIL;
+			Status st = exc.status;
+			if (st == null)
+				st = Status.FAIL;
 
-      String s = Status.to_json( st );
-      PrintWriter w = res.getWriter();
-      w.println( s );
-      w.flush();
-      AbstractHttpConnection.getCurrentConnection().getRequest().setHandled(true);
-      return;
+			String s = Status.to_json(st);
+			PrintWriter w = res.getWriter();
+			w.println(s);
+			w.flush();
+			AbstractHttpConnection.getCurrentConnection().getRequest().setHandled(true);
+			return;
 
-    }
-    else if( MongoException.Network.class.equals(ex_class) ){
+		} else if (MongoException.Network.class.equals(ex_class)) {
 
-      handle_mongo_error( "Mongodb server down or can not be reached", res );
-      return;
+			handle_mongo_error("Mongodb server down or can not be reached", res);
+			return;
 
-    }
-    else if( MongoException.CursorNotFound.class.equals(ex_class) ){
+		} else if (MongoException.CursorNotFound.class.equals(ex_class)) {
 
-      handle_mongo_error( "Mongodb: cursor not found", res );
-      return;
+			handle_mongo_error("Mongodb: cursor not found", res);
+			return;
 
-    }
-    else if( MongoException.DuplicateKey.class.equals(ex_class) ){
+		} else if (MongoException.DuplicateKey.class.equals(ex_class)) {
 
-      handle_mongo_error( "Mongodb: duplicate key", res );
-      return;
+			handle_mongo_error("Mongodb: duplicate key", res);
+			return;
 
-    }
-    else if( ex_class!=null&&"com.mongodb.CommandResult$CommandFailure".equals(ex_class.getName()) ){
+		} else if (ex_class != null && "com.mongodb.CommandResult$CommandFailure".equals(ex_class.getName())) {
 
-      Exception exc = (Exception)req.getAttribute(Dispatcher.ERROR_EXCEPTION);
-      handle_mongo_error( "Mongodb: "+exc.getMessage(), res );
-      return;
+			Exception exc = (Exception) req.getAttribute(Dispatcher.ERROR_EXCEPTION);
+			handle_mongo_error("Mongodb: " + exc.getMessage(), res);
+			return;
 
-    }
+		}
 
-    super.handle( target, base_request, req, res );
+		super.handle(target, base_request, req, res);
 
+	}
 
-  }
+	// -------------------------------------------
+	private void handle_mongo_error(String msg, HttpServletResponse res) throws IOException {
+		res.setContentType("application/json;charset=UTF-8");
+		res.setStatus(SC_BAD_REQUEST);
 
-  // -------------------------------------------
-  private void handle_mongo_error( String msg, HttpServletResponse res )
-    throws IOException {
-    res.setContentType( "application/json;charset=UTF-8" );
-    res.setStatus( SC_BAD_REQUEST );
+		Status st = Status.get(msg);
 
-    Status st = Status.get( msg );
+		String s = Status.to_json(st);
+		PrintWriter w = res.getWriter();
+		w.println(s);
+		w.flush();
+		AbstractHttpConnection.getCurrentConnection().getRequest().setHandled(true);
+	}
 
-    String s = Status.to_json( st );
-    PrintWriter w = res.getWriter();
-    w.println( s );
-    w.flush();
-    AbstractHttpConnection.getCurrentConnection().getRequest().setHandled(true);
-  }
-
-  /*
-  @Override
-  protected void handleErrorPage( HttpServletRequest request, Writer writer, int code, String message)
-    throws IOException {
-
-    log.info("handleErrorPage");
-
-  }
-
-  @Override
-  protected void writeErrorPage( HttpServletRequest request, Writer writer,
-    int code, String message, boolean showStacks) throws IOException {
-
-    log.info("writeErrorPage");
-
-  }
-
-  @Override
-  protected void writeErrorPageHead( HttpServletRequest request, Writer writer,
-    int code, String message) throws IOException {
-
-    log.info("writeErrorPageHead");
-
-  }
-
-  @Override
-  protected void writeErrorPageBody( HttpServletRequest request, Writer writer,
-    int code, String message, boolean showStacks) throws IOException {
-
-    log.info("writeErrorPageBody");
-
-  }
-
-  @Override
-  protected void writeErrorPageMessage( HttpServletRequest request, Writer writer,
-    int code, String message,String uri) throws IOException {
-
-    log.info("writeErrorPageBody");
-
-  }
-
-  @Override
-  protected void writeErrorPageStacks( HttpServletRequest request, Writer writer)
-    throws IOException {
-
-    log.info("writeErrorPageBody");
-
-  }
-
-
-  @Override
-  protected void write(Writer writer,String string)
-    throws IOException {
-
-    log.info("writeErrorPageBody");
-
-  }
-  */
+	/*
+	 * @Override protected void handleErrorPage( HttpServletRequest request,
+	 * Writer writer, int code, String message) throws IOException {
+	 * 
+	 * log.info("handleErrorPage");
+	 * 
+	 * }
+	 * 
+	 * @Override protected void writeErrorPage( HttpServletRequest request,
+	 * Writer writer, int code, String message, boolean showStacks) throws
+	 * IOException {
+	 * 
+	 * log.info("writeErrorPage");
+	 * 
+	 * }
+	 * 
+	 * @Override protected void writeErrorPageHead( HttpServletRequest request,
+	 * Writer writer, int code, String message) throws IOException {
+	 * 
+	 * log.info("writeErrorPageHead");
+	 * 
+	 * }
+	 * 
+	 * @Override protected void writeErrorPageBody( HttpServletRequest request,
+	 * Writer writer, int code, String message, boolean showStacks) throws
+	 * IOException {
+	 * 
+	 * log.info("writeErrorPageBody");
+	 * 
+	 * }
+	 * 
+	 * @Override protected void writeErrorPageMessage( HttpServletRequest
+	 * request, Writer writer, int code, String message,String uri) throws
+	 * IOException {
+	 * 
+	 * log.info("writeErrorPageBody");
+	 * 
+	 * }
+	 * 
+	 * @Override protected void writeErrorPageStacks( HttpServletRequest
+	 * request, Writer writer) throws IOException {
+	 * 
+	 * log.info("writeErrorPageBody");
+	 * 
+	 * }
+	 * 
+	 * 
+	 * @Override protected void write(Writer writer,String string) throws
+	 * IOException {
+	 * 
+	 * log.info("writeErrorPageBody");
+	 * 
+	 * }
+	 */
 
 }

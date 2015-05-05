@@ -5,7 +5,7 @@
  * For commercial usage please contact me
  * gmlvsk2@gmail.com
  *
-*/
+ */
 
 package com.andreig.jetty;
 
@@ -42,413 +42,400 @@ import com.mongodb.util.JSON;
 import com.mongodb.util.JSONParseException;
 
 @SuppressWarnings("serial")
-@WebServlet(name="SkeletonMongodbServlet")
+@WebServlet(name = "SkeletonMongodbServlet")
 public class WriteServlet extends SkeletonMongodbServlet {
 
-  private static final Logger log = Logger.getLogger( WriteServlet.class.getName() );
-  private WriteConcern write_concern = MongoDB.write_concern;
-  private boolean do_return = write_concern==WriteConcern.FSYNC_SAFE;
-  private boolean do_search = Config.search;
+	private static final Logger log = Logger.getLogger(WriteServlet.class.getName());
+	private WriteConcern write_concern = MongoDB.write_concern;
+	private boolean do_return = write_concern == WriteConcern.FSYNC_SAFE;
+	private boolean do_search = Config.search;
 
-  // --------------------------------
-  @Override
-  public void init() throws ServletException{
+	// --------------------------------
+	@Override
+	public void init() throws ServletException {
 
-    super.init();
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "init() "+name );
+		super.init();
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("init() " + name);
 
-  }
-
-  // --------------------------------
-  @Override
-  public void destroy(){
-
-    @SuppressWarnings("unused")
-	ServletConfig config = getServletConfig();
-    String name = getServletName();
-    log.fine( "destroy() "+name );
-
-  }
-
-  // DELETE
-  // ------------------------------------
-  @Override
-  protected void doDelete(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
-
-    log.fine( "doDelete()" );
-
-    if( !can_write(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
-
-    InputStream is = req.getInputStream();
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      String names[]  = req2mongonames( req );
-      if( names!=null ){
-	db_name = names[0];
-	col_name = names[1];
-      }
-      if( db_name==null || col_name==null ){
-	error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-	return;
-      }
-    }
-
-    DB db = mongo.getDB( db_name );
-
-    // mongo auth
-    String user = req.getParameter( "user" );
-    String passwd = req.getParameter( "passwd" );
-    if( user!=null&&passwd!=null&&(!db.isAuthenticated()) ){
-      boolean auth = db.authenticate( user, passwd.toCharArray() );
-      if( !auth ){
-	res.sendError( SC_UNAUTHORIZED );
-	return;
-      }
-    }
-
-    DBCollection col = db.getCollection( col_name );
-
-    BufferedReader r = null;
-    DBObject q = null;
-    try{
-
-      r = new BufferedReader( new InputStreamReader(is) );
-      String data = r.readLine();
-      if( data==null ){
-	error( res, SC_BAD_REQUEST, Status.get("no data") );
-	return;
-      }
-      try{
-	q = (DBObject)JSON.parse( data );
-      }
-      catch( JSONParseException e ){
-	error( res, SC_BAD_REQUEST, Status.get("can not parse data") );
-	return;
-      }
-
-    }
-    finally{
-      if( r!=null )
-	r.close();
-    }
-
-    // search
-    if( do_search ){
-
-      DBCursor c = col.find( q );
-      long l = c.count();
-      String todelete[] = new String[(int)l];
-      int n = 0;
-
-      while( c.hasNext() ){
-
-	DBObject o = c.next();
-	ObjectId oid = (ObjectId)o.get( "_id" );
-	String id = oid.toStringMongod();
-	todelete[n++] = id;
-
-      }
-      c.close();
-      search.get_writer().delete( todelete );
-
-    }
-
-    WriteResult wr = col.remove( q, write_concern );
-
-    // return operation status
-    if( do_return ){
-      out_str( req, wr.toString() );
-      if( wr.getError()==null ){
-	res.setStatus( SC_BAD_REQUEST );
-	return;
-      }
-    }
-
-    res.setStatus( SC_OK );
-
-  }
-
-  // POST
-  // ------------------------------------
-  @Override
-  protected void doPost(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
-
-    log.fine( "doPost()" );
-
-    if( !can_write(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
-
-    InputStream is = req.getInputStream();
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      String names[]  = req2mongonames( req );
-      if( names!=null ){
-	db_name = names[0];
-	col_name = names[1];
-      }
-      if( db_name==null || col_name==null ){
-	error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-	return;
-      }
-    }
-
-    boolean upsert = Boolean.parseBoolean( req.getParameter("upsert") );
-    boolean multi = Boolean.parseBoolean( req.getParameter("multi") );
-
-    DB db = mongo.getDB( db_name );
-
-    // mongo auth
-    String user = req.getParameter( "user" );
-    String passwd = req.getParameter( "passwd" );
-    if( user!=null&&passwd!=null&&(!db.isAuthenticated()) ){
-      boolean auth = db.authenticate( user, passwd.toCharArray() );
-      if( !auth ){
-	res.sendError( SC_UNAUTHORIZED );
-	return;
-      }
-    }
-
-    DBCollection col = db.getCollection( col_name );
-
-    BufferedReader r = null;
-    DBObject q=null, o=null;
-    try{
-
-      r = new BufferedReader( new InputStreamReader(is) );
-      String q_s = r.readLine();
-      if( q_s==null ){
-	error( res, SC_BAD_REQUEST, Status.get("no data") );
-	return;
-      }
-      String o_s = r.readLine();
-      if( o_s==null ){
-	error( res, SC_BAD_REQUEST, Status.get("obj to update missing") );
-	return;
-      }
-      try{
-	q = (DBObject)JSON.parse( q_s );
-	o = (DBObject)JSON.parse( o_s );
-      }
-      catch( JSONParseException e ){
-	error( res, SC_BAD_REQUEST, Status.get("can not parse data") );
-	return;
-      }
-
-    }
-    finally{
-      if( r!=null )
-	r.close();
-    }
-    //
-    // search
-    if( do_search ){
-
-      String fn = col.getFullName();
-      DBCursor c = col.find( q );
-      int cnt = c.count();
-      if( !multi ) c.limit( 1 );
-      long l = multi?cnt:1;
-      String toupdate[] = new String[(int)l];
-      int n = 0;
-      boolean insert = false;
-
-      if( upsert && !multi && cnt==0 )
-	insert = true;
-
-      while( c.hasNext() ){
-
-	DBObject _o = c.next();
-	ObjectId oid = (ObjectId)_o.get( "_id" );
-	String id = oid.toStringMongod();
-	toupdate[n++] = id;
-
-      }
-      c.close();
-
-      List<String> flds = Config.search_index_fields.get( fn );
-      boolean commit = false;
-      Document doc = null;
-      Search _writer = search.get_writer();
-      if( flds!=null&&flds.size()>0 ){
-	doc = new Document();
-	try{
-	  for( String fld:flds ){
-	    String val = (String)o.get( fld );
-	    if( val==null )
-	      continue;
-	    Search.add_searchable_s( doc, fld, val );
-	    commit = true;
-	  }
-	  if( commit )
-	    _writer.commit( doc );
 	}
-	catch( ClassCastException e ){
-	  error( res, SC_BAD_REQUEST, Status.get("searchable fields must be type String") );
-	  return;
+
+	// --------------------------------
+	@Override
+	public void destroy() {
+
+		@SuppressWarnings("unused")
+		ServletConfig config = getServletConfig();
+		String name = getServletName();
+		log.fine("destroy() " + name);
+
 	}
-	catch( CorruptIndexException e ){
-	  error( res, SC_BAD_REQUEST, Status.get("Search corrupt index"+e) );
-	  return;
+
+	// DELETE
+	// ------------------------------------
+	@Override
+	protected void doDelete(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+
+		log.fine("doDelete()");
+
+		if (!can_write(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
+
+		InputStream is = req.getInputStream();
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			String names[] = req2mongonames(req);
+			if (names != null) {
+				db_name = names[0];
+				col_name = names[1];
+			}
+			if (db_name == null || col_name == null) {
+				error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+				return;
+			}
+		}
+
+		DB db = mongo.getDB(db_name);
+
+		// mongo auth
+		String user = req.getParameter("user");
+		String passwd = req.getParameter("passwd");
+		if (user != null && passwd != null && (!db.isAuthenticated())) {
+			boolean auth = db.authenticate(user, passwd.toCharArray());
+			if (!auth) {
+				res.sendError(SC_UNAUTHORIZED);
+				return;
+			}
+		}
+
+		DBCollection col = db.getCollection(col_name);
+
+		BufferedReader r = null;
+		DBObject q = null;
+		try {
+
+			r = new BufferedReader(new InputStreamReader(is));
+			String data = r.readLine();
+			if (data == null) {
+				error(res, SC_BAD_REQUEST, Status.get("no data"));
+				return;
+			}
+			try {
+				q = (DBObject) JSON.parse(data);
+			} catch (JSONParseException e) {
+				error(res, SC_BAD_REQUEST, Status.get("can not parse data"));
+				return;
+			}
+
+		} finally {
+			if (r != null)
+				r.close();
+		}
+
+		// search
+		if (do_search) {
+
+			DBCursor c = col.find(q);
+			long l = c.count();
+			String todelete[] = new String[(int) l];
+			int n = 0;
+
+			while (c.hasNext()) {
+
+				DBObject o = c.next();
+				ObjectId oid = (ObjectId) o.get("_id");
+				String id = oid.toStringMongod();
+				todelete[n++] = id;
+
+			}
+			c.close();
+			search.get_writer().delete(todelete);
+
+		}
+
+		WriteResult wr = col.remove(q, write_concern);
+
+		// return operation status
+		if (do_return) {
+			out_str(req, wr.toString());
+			if (wr.getError() == null) {
+				res.setStatus(SC_BAD_REQUEST);
+				return;
+			}
+		}
+
+		res.setStatus(SC_OK);
+
 	}
-      }
-      if( commit && insert )
-	log.warning( "upsert with search not implemented yet" );
-      else
-	_writer.update( toupdate, doc );
 
-    }
+	// POST
+	// ------------------------------------
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    WriteResult wr = col.update( q, o, upsert, multi, write_concern );
+		log.fine("doPost()");
 
-    // return operation status
-    if( do_return ){
-      out_str( req, wr.toString() );
-      if( wr.getError()==null ){
-	res.setStatus( SC_BAD_REQUEST );
-	return;
-      }
-    }
+		if (!can_write(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    res.setStatus( SC_CREATED );
+		InputStream is = req.getInputStream();
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			String names[] = req2mongonames(req);
+			if (names != null) {
+				db_name = names[0];
+				col_name = names[1];
+			}
+			if (db_name == null || col_name == null) {
+				error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+				return;
+			}
+		}
 
-  }
+		boolean upsert = Boolean.parseBoolean(req.getParameter("upsert"));
+		boolean multi = Boolean.parseBoolean(req.getParameter("multi"));
 
-  // PUT
-  // ------------------------------------
-  @Override
-  protected void doPut(HttpServletRequest req, HttpServletResponse res)
-    throws ServletException, IOException {
+		DB db = mongo.getDB(db_name);
 
-    log.fine( "doPut()" );
+		// mongo auth
+		String user = req.getParameter("user");
+		String passwd = req.getParameter("passwd");
+		if (user != null && passwd != null && (!db.isAuthenticated())) {
+			boolean auth = db.authenticate(user, passwd.toCharArray());
+			if (!auth) {
+				res.sendError(SC_UNAUTHORIZED);
+				return;
+			}
+		}
 
-    if( !can_write(req) ){
-      res.sendError( SC_UNAUTHORIZED );
-      return;
-    }
+		DBCollection col = db.getCollection(col_name);
 
-    InputStream is = req.getInputStream();
-    String db_name = req.getParameter( "dbname" );
-    String col_name = req.getParameter( "colname" );
-    if( db_name==null || col_name==null ){
-      String names[]  = req2mongonames( req );
-      if( names!=null ){
-	db_name = names[0];
-	col_name = names[1];
-      }
-      if( db_name==null || col_name==null ){
-	error( res, SC_BAD_REQUEST, Status.get("param name missing") );
-	return;
-      }
-    }
-    DB db = mongo.getDB( db_name );
+		BufferedReader r = null;
+		DBObject q = null, o = null;
+		try {
 
-    // mongo auth
-    String user = req.getParameter( "user" );
-    String passwd = req.getParameter( "passwd" );
-    if( user!=null&&passwd!=null&&(!db.isAuthenticated()) ){
-      boolean auth = db.authenticate( user, passwd.toCharArray() );
-      if( !auth ){
-	res.sendError( SC_UNAUTHORIZED );
-	return;
-      }
-    }
+			r = new BufferedReader(new InputStreamReader(is));
+			String q_s = r.readLine();
+			if (q_s == null) {
+				error(res, SC_BAD_REQUEST, Status.get("no data"));
+				return;
+			}
+			String o_s = r.readLine();
+			if (o_s == null) {
+				error(res, SC_BAD_REQUEST, Status.get("obj to update missing"));
+				return;
+			}
+			try {
+				q = (DBObject) JSON.parse(q_s);
+				o = (DBObject) JSON.parse(o_s);
+			} catch (JSONParseException e) {
+				error(res, SC_BAD_REQUEST, Status.get("can not parse data"));
+				return;
+			}
 
-    DBCollection col = db.getCollection( col_name );
+		} finally {
+			if (r != null)
+				r.close();
+		}
+		//
+		// search
+		if (do_search) {
 
-    BufferedReader r = null;
-    ArrayList<DBObject> ar = new ArrayList<DBObject>();
-    try{
+			String fn = col.getFullName();
+			DBCursor c = col.find(q);
+			int cnt = c.count();
+			if (!multi)
+				c.limit(1);
+			long l = multi ? cnt : 1;
+			String toupdate[] = new String[(int) l];
+			int n = 0;
+			boolean insert = false;
 
-      r = new BufferedReader( new InputStreamReader(is) );
-      String data;
-      while( (data=r.readLine())!=null ){
-	if( data!=null ){
-	  DBObject o;
-	  try{
-	    o = (DBObject)JSON.parse( data );
-	    ar.add( o );
-	  }
-	  catch( JSONParseException e ){
-	    error( res, SC_BAD_REQUEST, Status.get("can not parse data") );
-	    return;
-	  }
+			if (upsert && !multi && cnt == 0)
+				insert = true;
+
+			while (c.hasNext()) {
+
+				DBObject _o = c.next();
+				ObjectId oid = (ObjectId) _o.get("_id");
+				String id = oid.toStringMongod();
+				toupdate[n++] = id;
+
+			}
+			c.close();
+
+			List<String> flds = Config.search_index_fields.get(fn);
+			boolean commit = false;
+			Document doc = null;
+			Search _writer = search.get_writer();
+			if (flds != null && flds.size() > 0) {
+				doc = new Document();
+				try {
+					for (String fld : flds) {
+						String val = (String) o.get(fld);
+						if (val == null)
+							continue;
+						Search.add_searchable_s(doc, fld, val);
+						commit = true;
+					}
+					if (commit)
+						_writer.commit(doc);
+				} catch (ClassCastException e) {
+					error(res, SC_BAD_REQUEST, Status.get("searchable fields must be type String"));
+					return;
+				} catch (CorruptIndexException e) {
+					error(res, SC_BAD_REQUEST, Status.get("Search corrupt index" + e));
+					return;
+				}
+			}
+			if (commit && insert)
+				log.warning("upsert with search not implemented yet");
+			else
+				_writer.update(toupdate, doc);
+
+		}
+
+		WriteResult wr = col.update(q, o, upsert, multi, write_concern);
+
+		// return operation status
+		if (do_return) {
+			out_str(req, wr.toString());
+			if (wr.getError() == null) {
+				res.setStatus(SC_BAD_REQUEST);
+				return;
+			}
+		}
+
+		res.setStatus(SC_CREATED);
+
 	}
-      }
 
-    }
-    finally{
-      if( r!=null )
-	r.close();
-    }
+	// PUT
+	// ------------------------------------
+	@Override
+	protected void doPut(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
 
-    if( ar.size()==0 ){
-      error( res, SC_BAD_REQUEST, Status.get("can not parse data") );
-      return;
-    }
+		log.fine("doPut()");
 
-    WriteResult wr = col.insert( ar, write_concern );
+		if (!can_write(req)) {
+			res.sendError(SC_UNAUTHORIZED);
+			return;
+		}
 
-    // search
-    if( do_search ){
-      String fn = col.getFullName();
-      List<String> flds = Config.search_index_fields.get( fn );
-      if( flds!=null&&flds.size()>0 ){
-	Search _writer = search.get_writer();
-	try{
-	  for( DBObject o:ar ){
-	    boolean commit = false;
-	    Document doc = new Document();
-	    for( String fld:flds ){
-	      String val = (String)o.get( fld );
-	      if( val==null )
-		continue;
-	      Search.add_searchable_s( doc, fld, val );
-	      commit = true;
-	    }
-	    if( commit ){
-	      ObjectId id = (ObjectId)o.get("_id");
-	      String sid = id.toStringMongod();
-	      Search.add_storable( doc, "_id", sid );
-	      Search.add_searchable_s( doc, "_dbid_", fn );
-	      _writer.commit( doc );
-	    }
-	  }
+		InputStream is = req.getInputStream();
+		String db_name = req.getParameter("dbname");
+		String col_name = req.getParameter("colname");
+		if (db_name == null || col_name == null) {
+			String names[] = req2mongonames(req);
+			if (names != null) {
+				db_name = names[0];
+				col_name = names[1];
+			}
+			if (db_name == null || col_name == null) {
+				error(res, SC_BAD_REQUEST, Status.get("param name missing"));
+				return;
+			}
+		}
+		DB db = mongo.getDB(db_name);
+
+		// mongo auth
+		String user = req.getParameter("user");
+		String passwd = req.getParameter("passwd");
+		if (user != null && passwd != null && (!db.isAuthenticated())) {
+			boolean auth = db.authenticate(user, passwd.toCharArray());
+			if (!auth) {
+				res.sendError(SC_UNAUTHORIZED);
+				return;
+			}
+		}
+
+		DBCollection col = db.getCollection(col_name);
+
+		BufferedReader r = null;
+		ArrayList<DBObject> ar = new ArrayList<DBObject>();
+		try {
+
+			r = new BufferedReader(new InputStreamReader(is));
+			String data;
+			while ((data = r.readLine()) != null) {
+				if (data != null) {
+					DBObject o;
+					try {
+						o = (DBObject) JSON.parse(data);
+						ar.add(o);
+					} catch (JSONParseException e) {
+						error(res, SC_BAD_REQUEST, Status.get("can not parse data"));
+						return;
+					}
+				}
+			}
+
+		} finally {
+			if (r != null)
+				r.close();
+		}
+
+		if (ar.size() == 0) {
+			error(res, SC_BAD_REQUEST, Status.get("can not parse data"));
+			return;
+		}
+
+		WriteResult wr = col.insert(ar, write_concern);
+
+		// search
+		if (do_search) {
+			String fn = col.getFullName();
+			List<String> flds = Config.search_index_fields.get(fn);
+			if (flds != null && flds.size() > 0) {
+				Search _writer = search.get_writer();
+				try {
+					for (DBObject o : ar) {
+						boolean commit = false;
+						Document doc = new Document();
+						for (String fld : flds) {
+							String val = (String) o.get(fld);
+							if (val == null)
+								continue;
+							Search.add_searchable_s(doc, fld, val);
+							commit = true;
+						}
+						if (commit) {
+							ObjectId id = (ObjectId) o.get("_id");
+							String sid = id.toStringMongod();
+							Search.add_storable(doc, "_id", sid);
+							Search.add_searchable_s(doc, "_dbid_", fn);
+							_writer.commit(doc);
+						}
+					}
+				} catch (ClassCastException e) {
+					error(res, SC_BAD_REQUEST, Status.get("searchable fields must be type String"));
+					return;
+				} catch (CorruptIndexException e) {
+					error(res, SC_BAD_REQUEST, Status.get("Search corrupt index" + e));
+					return;
+				}
+			}
+		}
+
+		// return operation status
+		if (do_return) {
+			out_str(req, wr.toString());
+			if (wr.getError() == null) {
+				res.setStatus(SC_BAD_REQUEST);
+				return;
+			}
+		}
+
+		res.setStatus(SC_CREATED);
+
 	}
-	catch( ClassCastException e ){
-	  error( res, SC_BAD_REQUEST, Status.get("searchable fields must be type String") );
-	  return;
-	}
-	catch( CorruptIndexException e ){
-	  error( res, SC_BAD_REQUEST, Status.get("Search corrupt index"+e) );
-	  return;
-	}
-      }
-    }
-
-    // return operation status
-    if( do_return ){
-      out_str( req, wr.toString() );
-      if( wr.getError()==null ){
-	res.setStatus( SC_BAD_REQUEST );
-	return;
-      }
-    }
-
-    res.setStatus( SC_CREATED );
-
-  }
-
 
 }
