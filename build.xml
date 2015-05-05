@@ -1,0 +1,131 @@
+
+<project name="Bible web" default="compile" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+
+  <property name="ivy.jar.dir" value="${basedir}/ivy" />
+  <property name="build.dir" value="${basedir}/build" />
+  <property name="dist.dir" value="${basedir}/dist" />
+  <property name="module.name" value="MongodbServer-beta" />
+
+  <!-- download ivy jar -->
+  <target name="download-ivy" unless="skip.download">
+      <mkdir dir="${ivy.jar.dir}"/>
+      <echo message="installing ivy..."/>
+      <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/2.2.0/ivy-2.2.0.jar"
+	       dest="${ivy.jar.dir}/ivy.jar" usetimestamp="true"/>
+  </target>
+    
+  <!-- get dependencies -->
+  <target name="resolve" depends="download-ivy" description="--> retreive dependencies with ivy">
+
+    <path id="ivy.lib.path">
+      <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
+    </path>
+    <taskdef resource="org/apache/ivy/ant/antlib.xml"
+	uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+
+    <ivy:configure file="${ivy.jar.dir}/deps.xml" />
+    <ivy:retrieve/>
+                  
+
+  </target>    
+  <!-- get dependencies -->
+
+  <!-- init -->
+  <target name="init">
+    <tstamp/>
+    <mkdir dir="${build.dir}/classes"/>
+  </target>
+
+  <path id="project.classpath">
+    <pathelement path="./build/classes/" />
+    <fileset dir="./lib">
+      <include name="**/*.jar" />
+    </fileset>
+  </path>
+
+  <target name="clean">
+    <delete dir="${build.dir}"/>
+    <delete dir="${dist.dir}"/>
+  </target>
+
+
+  <!--  compile -->
+  <target name="compile" depends="init" description="Compiles Java source">
+
+    <javac
+        srcdir="src"
+        destdir="${build.dir}/classes/"
+	includeantruntime="false"
+        classpathref="project.classpath"
+        debug="on" >
+	 <compilerarg value="-Xlint"/>
+    </javac>
+
+  </target>
+
+  <!-- run server -->
+  <target name="run" depends="compile" description="run" >
+
+    <java classname="com.andreig.jetty.SimpleMongodbServer" classpathref="project.classpath" />
+
+  </target>
+
+
+  <!--  create jar -->
+  <target name="jar" depends="compile">
+    <mkdir dir="${dist.dir}"/>
+    <mkdir dir="${dist.dir}/lib/"/>
+    <jar destfile="${dist.dir}/lib/${module.name}.jar" index="true">
+      <fileset dir="${build.dir}/classes" excludes="**/*test*.class" />
+      <manifest>
+	<attribute name="Built-By" value="Andrei Goumilevski"/>
+	<attribute name="Implementation-Vendor" value="andreig.com"/>
+	<attribute name="Implementation-Title" value="Mongodb Server"/>
+	<attribute name="Implementation-Version" value="beta"/>
+      </manifest>
+    </jar>
+  </target>
+
+  <!--  create dist -->
+  <target name="dist" depends="init,jar" description="Creates distribution">
+
+    <mkdir dir="${dist.dir}/config"/>
+    <mkdir dir="${dist.dir}/bin"/>
+    <mkdir dir="${dist.dir}/logs"/>
+
+    <copy file="mongoser.sh" todir="${dist.dir}/bin" />
+    <chmod file="${dist.dir}/bin/mongoser.sh" perm="a+x"/>
+    <copy file="config/README" todir="${dist.dir}" />
+    <copy file="config/LICENSE" todir="${dist.dir}" />
+    <copy file="curl_examples" todir="${dist.dir}" />
+    <copy
+        todir="${dist.dir}/lib"
+        flatten="true">
+      <fileset dir="lib">
+        <include name="**/gson*.jar" />
+        <include name="**/javax*.jar" />
+        <include name="**/mongo*.jar" />
+        <include name="**/jetty-http*.jar" />
+        <include name="**/jetty-io*.jar" /> 
+        <include name="**/jetty-security*.jar" /> 
+        <include name="**/jetty-server*.jar" /> 
+        <include name="**/jetty-util*.jar" /> 
+        <include name="**/jetty-servlet*.jar" /> 
+        <include name="**/jetty-continuation*.jar" /> 
+        <include name="**/spymemcached*.jar" /> 
+        <include name="**/lucene*.jar" /> 
+	<exclude name="**/*sources*"/>
+	<exclude name="**/*javadoc*"/>
+      </fileset>
+    </copy>
+    <copy
+        todir="${dist.dir}/config"
+        flatten="true">
+      <fileset dir="config">
+	<exclude name="**/README"/>
+      </fileset>
+    </copy>
+
+  </target>
+
+</project>

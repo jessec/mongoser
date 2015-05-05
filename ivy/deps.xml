@@ -1,0 +1,27 @@
+<ivysettings>
+
+  <settings defaultResolver="myresolver"/>
+
+  <resolvers>
+
+    <ibiblio name="ibiblio" m2compatible="true" checkmodified="false"/>
+
+    <url name="jetty">
+      <artifact pattern="http://files.couchbase.com/maven2/spy/[module]/[revision]/[artifact]-[revision].[ext]" />
+    </url>
+
+    <!-- just for spymemcached java repo -->
+    <url name="spymemcached">
+      <artifact pattern="http://files.couchbase.com/maven2/spy/[module]/[revision]/[artifact]-[revision].[ext]" />
+    </url>
+
+
+    <chain name="myresolver">
+      <resolver ref="ibiblio" />
+      <resolver ref="jetty" />
+      <resolver ref="spymemcached" />
+    </chain>
+
+  </resolvers>
+
+</ivysettings>

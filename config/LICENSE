@@ -1,0 +1,9 @@
+
+Copyright Andrei Goumilevski
+
+Mongodb REST server has dual license
+GPLv3 for non commercial projects
+For commercial usage please contact me
+gmlvsk2@gmail.com
+
+Jetty server, gson, Lucene and Mongodb driver are under Apache license

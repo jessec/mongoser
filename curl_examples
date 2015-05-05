@@ -1,0 +1,92 @@
+
+From unix shell set your web server url
+export mongoser="http://yourmongohost.com:8081"
+
+---------------------
+When auth turned on access to mongodb is based on user roles
+if you specify auth=true, you need to add users to auth.properties and put them in
+one of three roles: mongoreadonly, mongoreadwrite, admin
+suppose this is the line in auth.properties
+admin: aaaaaa, admin
+Then if you want drop db 
+curl -i "$mongohost/database?dbname=foo" -XDELETE -u"admin:aaaaa"
+---------------------
+
+---------------------
+When Mongodb started with --auth option you can authenticate to particular database passing 2 
+additional params: user amd passwd
+For example
+curl -i "$mongohost/write?dbname=foo&colname=test&user=simpleuser&passwd=mypasswd" -XPUT --data-binary '{name:"foo"}'
+
+use -i to see headers
+
+list databases
+curl -i "$mongohost/database"
+
+drop database
+curl -i "$mongohost/database?dbname=foo" -XDELETE
+
+get db stat
+curl -i "$mongohost/database?dbname=foo&op=stats"
+
+list collections
+curl -i "$mongohost/collection?dbname=foo"
+
+get col stat
+curl -i "$mongohost/collection?dbname=foo&op=stats&colname=test"
+
+create col
+curl -i "$mongohost/collection?dbname=foo&colname=test" -XPUT
+
+
+add record
+curl -i "$mongohost/write?dbname=foo&colname=test" -XPUT --data-binary '{name:"foo"}'
+
+add multi record must be separated by newline
+curl -i "$mongohost/write?dbname=foo&colname=test" -XPUT --data-binary $'{name:"foo"}\n{name:"moo"}\n{name:"cow"}'
+
+update record, first field is condition, must be separated by newline
+curl -i "$mongohost/write?dbname=foo&colname=test" -XPOST --data-binary $'{name:"foo"}\n{name:"newfoo"}'
+
+delete records with condition
+curl -i "$mongohost/write?dbname=foo&colname=test" -XDELETE -d '{name:"newfoo"}'
+
+read all records in collection
+curl -i "$mongohost/query?dbname=foo&colname=test"
+
+with limit
+curl -i "$mongohost/query?dbname=foo&colname=test&limit=3"
+with limit and skip
+curl -i "$mongohost/query?dbname=foo&colname=test&limit=3&skip=3"
+with condition
+curl -i "$mongohost/query?dbname=foo&colname=test" -XPOST -d'{name:"newfoo"}'
+with condition and sort
+curl -i "$mongohost/query?dbname=foo&colname=test" -XPOST --data-binary $'{name:"newfoo"}\n{name:1}'
+
+#distinct by key
+curl -i "$mongohost/distinct?dbname=foo&colname=test&key=name"
+#distinct by key with query
+curl -i "$mongohost/distinct?dbname=foo&colname=test&key=name" -XPOST -d'{name:"newfoo"}'
+
+list indexes
+curl -i "$mongohost/index?dbname=foo&colname=test"
+
+add index
+curl -i "$mongohost/index?dbname=foo&colname=test" -XPUT -d"{name:1,age:1}"
+
+delete index
+curl -i "$mongohost/index?dbname=foo&colname=test" -XDELETE -d"{name:1,age:1}"
+
+lucene searching
+
+simple one field word search
+curl -i "$mongohost/search?dbname=foo&colname=test&field=foo&text=word"
+simple one field word search with number of top search items to return, defaults to 10
+curl -i "$mongohost/search?dbname=foo&colname=test&field=foo&text=word&limit=22"
+
+please read lucene query syntax here http://lucene.apache.org/core/3_6_0/queryparsersyntax.html
+curl -i "$mongohost/search?dbname=foo&colname=test&limit=22" -XPOST -d'word1 AND word2 OR anotherword'
+
+
+
+
